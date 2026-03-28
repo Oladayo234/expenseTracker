@@ -1,5 +1,6 @@
 package com.semicolon.expensetracker.dtos.request;
 
+import com.semicolon.expensetracker.data.models.enums.Currency;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import lombok.Data;
@@ -19,4 +20,7 @@ public class RegisterUserRequest {
     @NotBlank
     private String userName;
 
+    @NotBlank
+    private String phoneNumber;
+    private Currency currencyPreference;
 }

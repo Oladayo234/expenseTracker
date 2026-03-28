@@ -20,7 +20,7 @@ public class Expense {
     @EqualsAndHashCode.Include
     private UUID id;
     private BigDecimal amount;
-    private LocalDateTime entryDate;
+    private LocalDateTime entryDate = LocalDateTime.now();
     private String note;
     private PaymentMethod paymentMethod;
 
