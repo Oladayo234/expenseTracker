@@ -12,7 +12,7 @@ import java.util.UUID;
 @Data
 public class CreateWalletRequest {
     private UUID userId;
-    @NotBlank
+    @NotBlank(message = "wallet name is required")
     private String name;
     private Currency currency;
 

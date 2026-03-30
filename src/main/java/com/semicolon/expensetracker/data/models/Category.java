@@ -1,5 +1,6 @@
 package com.semicolon.expensetracker.data.models;
 
+import com.semicolon.expensetracker.data.models.enums.TransactionType;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -19,6 +20,7 @@ public class Category {
     private String name;
     private String icon;
     private boolean isDefault;
+    private TransactionType transactionType;
 
     @ManyToOne(optional = true)
     @JoinColumn(name = "user_id")

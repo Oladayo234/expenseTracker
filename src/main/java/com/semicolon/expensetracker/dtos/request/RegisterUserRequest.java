@@ -7,20 +7,20 @@ import lombok.Data;
 
 @Data
 public class RegisterUserRequest {
-    @NotBlank
+    @NotBlank(message = "password is required")
     private String password;
 
-    @NotBlank
+    @NotBlank(message = "name is required")
     private String name;
 
-    @NotBlank
+    @NotBlank(message = "email is required")
     @Email
     private String email;
 
-    @NotBlank
+    @NotBlank(message = "username is required")
     private String userName;
 
-    @NotBlank
+    @NotBlank(message = "phone number is required")
     private String phoneNumber;
     private Currency currencyPreference;
 }
