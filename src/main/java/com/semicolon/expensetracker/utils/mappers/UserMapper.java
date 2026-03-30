@@ -4,6 +4,7 @@ import com.semicolon.expensetracker.data.models.User;
 import com.semicolon.expensetracker.dtos.request.RegisterUserRequest;
 import com.semicolon.expensetracker.dtos.response.LoginResponse;
 import com.semicolon.expensetracker.dtos.response.RegisterUserResponse;
+import com.semicolon.expensetracker.dtos.response.UpdateUserResponse;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -35,6 +36,14 @@ public class UserMapper {
         response.setUserName(user.getUsername());
         response.setToken(token);
         response.setMessage("Login successful");
+        return response;
+    }
+
+    public UpdateUserResponse toUpdateResponse(User user, String token) {
+        UpdateUserResponse response = new UpdateUserResponse();
+        response.setId(user.getId());
+        response.setUsername(user.getUsername());
+        response.setToken(token);
         return response;
     }
 }
