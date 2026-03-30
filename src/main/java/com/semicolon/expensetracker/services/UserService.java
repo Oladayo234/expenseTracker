@@ -11,12 +11,11 @@ import com.semicolon.expensetracker.dtos.response.RegisterUserResponse;
 import com.semicolon.expensetracker.dtos.response.UpdateUserResponse;
 import com.semicolon.expensetracker.exceptions.InvalidEntryException;
 import com.semicolon.expensetracker.security.JwtService;
+import com.semicolon.expensetracker.utils.mappers.UserMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 
-import java.util.Optional;
-import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -24,53 +23,34 @@ public class UserService {
     private final BCryptPasswordEncoder bCryptPasswordEncoder;
     private final UserRepository userRepository;
     private final JwtService jwtService;
+    private final UserMapper userMapper;
 
     public RegisterUserResponse registerUser(RegisterUserRequest request){
-        User user = new User();
-        if(userRepository.findByEmail(request.getEmail()).isPresent()){
+        if (userRepository.findByEmail(request.getEmail()).isPresent()) {
             throw new InvalidEntryException("User or Email already exists");
         }
-        else {
-            user.setEmail(request.getEmail());
+        if (request.getCurrencyPreference() == null) {
+            request.setCurrencyPreference(Currency.NAIRA);
         }
-        String encodedPassword = bCryptPasswordEncoder.encode(request.getPassword());
-        user.setPassword(encodedPassword);
-        user.setName(request.getName());
-        user.setUsername(request.getUserName());
-        user.setCurrencyPreference(
-                request.getCurrencyPreference() != null ? request.getCurrencyPreference() : Currency.NAIRA
-        );
-        user.setPhoneNumber(request.getPhoneNumber());
+        User user = userMapper.toEntity(request);
+        user.setPassword(bCryptPasswordEncoder.encode(request.getPassword()));
         User savedUser = userRepository.save(user);
-
-        RegisterUserResponse response = new RegisterUserResponse();
-        response.setEmail(savedUser.getEmail());
-        response.setUserName(savedUser.getUsername());
-        response.setName(savedUser.getName());
-
-        return response;
+        return userMapper.toRegisterResponse(savedUser);
     }
 
     public LoginResponse login(LoginRequest request){
         User user = userRepository.findByUsername(request.getUserName())
                 .orElseThrow(() -> new InvalidEntryException("Email or username incorrect"));
 
-        boolean isPasswordMatch = bCryptPasswordEncoder.matches(request.getPassword(), user.getPassword());
-        if (!isPasswordMatch){
+        if (!bCryptPasswordEncoder.matches(request.getPassword(), user.getPassword())) {
             throw new InvalidEntryException("Wrong password");
         }
-        LoginResponse response = new LoginResponse();
-        response.setToken(jwtService.generateToken(user));
-        response.setUserName(user.getUsername());
-        response.setName(user.getName());
-        response.setId(user.getId().toString());
-        response.setMessage("Login successful");
-        return response;
+        return userMapper.toLoginResponse(user, jwtService.generateToken(user));
     }
 
     public UpdateUserResponse updateUser(UpdateUserRequest request){
-        User user = userRepository.findByUsername(request.getUserName())
-                .orElseThrow(() -> new InvalidEntryException("Email or username incorrect"));
+        User user = userRepository.findById(request.getId())
+                .orElseThrow(() -> new InvalidEntryException("User not found"));
 
         if (request.getPassword() != null) user.setPassword(bCryptPasswordEncoder.encode(request.getPassword()));
         if (request.getPhoneNumber() != null) user.setPhoneNumber(request.getPhoneNumber());
@@ -84,4 +64,5 @@ public class UserService {
         response.setToken(jwtService.generateToken(savedUser));
         return response;
     }
+
 }
