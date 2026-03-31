@@ -15,11 +15,17 @@ import java.util.UUID;
 public interface ExpenseRepository extends JpaRepository<Expense, UUID> {
  List<Expense> findByWalletId(UUID WalletId);
  List<Expense> findByCategoryId(UUID CategoryId);
- List<Expense> findByEntryDateBetween(LocalDateTime start, LocalDateTime end);
- List<Expense> findByWalletIdAndEntryDateBetween(UUID WalletId, LocalDateTime start, LocalDateTime end);
  @Query("SELECT SUM(e.amount) FROM Expense e WHERE e.wallet.id = :walletId")
  Optional<BigDecimal> sumAmountByWalletId(@Param("walletId") UUID walletId);
  @Modifying
  @Query("UPDATE Expense e SET e.category.id = :newCategoryId WHERE e.category.id = :oldCategoryId")
  int reassignExpensesToCategory(@Param("oldCategoryId") UUID oldCategoryId, @Param("newCategoryId") UUID newCategoryId);
+ List<Expense> findByWalletIdOrderByExpenseDateDesc(UUID walletId);
+ List<Expense> findByCategoryIdOrderByExpenseDateDesc(UUID categoryId);
+ List<Expense> findByWalletIdAndExpenseDateBetweenOrderByExpenseDateDesc(UUID walletId, LocalDateTime start, LocalDateTime end);
+ List<Expense> findByWalletUserIdAndExpenseDateBetween(UUID userId, LocalDateTime start, LocalDateTime end);
+ @Query("SELECT e.category.id, e.category.name, e.category.transactionType, SUM(e.amount) FROM Expense e WHERE e.wallet.user.id = :userId AND e.expenseDate BETWEEN :start AND :end GROUP BY e.category.id, e.category.name, e.category.transactionType")
+ List<Object[]> findCategoryBreakdownByUserIdAndDateRange(@Param("userId") UUID userId, @Param("start") LocalDateTime start, @Param("end") LocalDateTime end);
+ List<Expense> findByExpenseDateBetween(LocalDateTime start, LocalDateTime end);
+ List<Expense> findByWalletIdAndExpenseDateBetween(UUID walletId, LocalDateTime start, LocalDateTime end);
 }

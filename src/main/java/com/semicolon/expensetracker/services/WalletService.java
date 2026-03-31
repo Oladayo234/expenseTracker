@@ -14,6 +14,7 @@ import com.semicolon.expensetracker.exceptions.InvalidEntryException;
 import com.semicolon.expensetracker.utils.mappers.WalletMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
@@ -30,16 +31,21 @@ public class WalletService {
 
     public CreateWalletResponse createWallet(CreateWalletRequest request) {
         User user = findUserById(request.getUserId());
-        Wallet wallet = createWalletEntity(request, user);
-        Wallet savedWallet = saveWallet(wallet);
-        return buildCreateWalletResponse(savedWallet);
+        Wallet wallet = new Wallet();
+        wallet.setUser(user);
+        wallet.setCurrency(request.getCurrency() != null ? request.getCurrency() : Currency.NAIRA);
+        wallet.setName(request.getName());
+        Wallet savedWallet = walletRepository.save(wallet);
+        CreateWalletResponse response = new CreateWalletResponse();
+        response.setName(savedWallet.getName());
+        response.setCurrency(savedWallet.getCurrency());
+        response.setMessage("Wallet created successfully");
+        return response;
     }
 
     public List<WalletResponse> getWalletsByUser(UUID userId) {
         findUserById(userId);
-
         List<Wallet> wallets = walletRepository.findByUserId(userId);
-
         List<WalletResponse> responses = new ArrayList<>();
         for (Wallet wallet : wallets) {
             responses.add(walletMapper.toWalletResponse(wallet));
@@ -49,10 +55,7 @@ public class WalletService {
 
     public WalletBalanceResponse getWalletBalance(UUID walletId) {
         Wallet wallet = findWalletById(walletId);
-
-        BigDecimal balance = expenseRepository.sumAmountByWalletId(walletId)
-                .orElse(BigDecimal.ZERO);
-
+        BigDecimal balance = expenseRepository.sumAmountByWalletId(walletId).orElse(BigDecimal.ZERO);
         return walletMapper.toWalletBalanceResponse(wallet, balance);
     }
 
@@ -64,29 +67,5 @@ public class WalletService {
     private Wallet findWalletById(UUID walletId) {
         return walletRepository.findById(walletId)
                 .orElseThrow(() -> new InvalidEntryException("Wallet does not exist"));
-    }
-
-    private Wallet createWalletEntity(CreateWalletRequest request, User user) {
-        Wallet wallet = new Wallet();
-        wallet.setUser(user);
-        wallet.setCurrency(getCurrencyOrDefault(request.getCurrency()));
-        wallet.setName(request.getName());
-        return wallet;
-    }
-
-    private Currency getCurrencyOrDefault(Currency requestedCurrency) {
-        return requestedCurrency != null ? requestedCurrency : Currency.NAIRA;
-    }
-
-    private Wallet saveWallet(Wallet wallet) {
-        return walletRepository.save(wallet);
-    }
-
-    private CreateWalletResponse buildCreateWalletResponse(Wallet wallet) {
-        CreateWalletResponse response = new CreateWalletResponse();
-        response.setName(wallet.getName());
-        response.setCurrency(wallet.getCurrency());
-        response.setMessage("Wallet created successfully");
-        return response;
     }
 }

@@ -28,49 +28,36 @@ public class CategoryService {
     @Transactional
     public CreateCategoryResponse createCategory(CreateCategoryRequest request) {
         validateCategoryNameNotExists(request.getName(), request.getUserId());
-
-        User user = null;
-        if (request.getUserId() != null) {
-            user = findUserById(request.getUserId());
-        }
-
-        Category category = createCategoryEntity(request, user);
-        Category savedCategory = saveCategory(category);
-
-        return mapToCreateCategoryResponse(savedCategory);
+        User user = request.getUserId() != null ? findUserById(request.getUserId()) : null;
+        Category category = new Category();
+        category.setName(request.getName());
+        category.setTransactionType(request.getTransactionType());
+        category.setDefault(request.getUserId() == null);
+        category.setUser(user);
+        return mapToCreateCategoryResponse(categoryRepository.save(category));
     }
 
     public List<CreateCategoryResponse> getCategories(UUID userId) {
-        List<Category> categories;
-
-        if (userId != null) {
-            categories = categoryRepository.findByUserIdOrIsDefaultTrue(userId);
-        } else {
-            categories = categoryRepository.findByIsDefaultTrue();
-        }
-
+        List<Category> categories = userId != null
+                ? categoryRepository.findByUserIdOrIsDefaultTrue(userId)
+                : categoryRepository.findByIsDefaultTrue();
         List<CreateCategoryResponse> responses = new ArrayList<>();
         for (Category category : categories) {
             responses.add(mapToCreateCategoryResponse(category));
         }
-
         return responses;
     }
 
     @Transactional
     public void deleteCategory(DeleteCategoryRequest request) {
         Category categoryToDelete = findCategoryById(request.getCategoryId());
-
         validateCategoryOwnership(categoryToDelete, request.getUserId());
         validateNotDefaultCategory(categoryToDelete);
-
         Category uncategorizedCategory = findOrCreateUncategorizedCategory();
-
         expenseRepository.reassignExpensesToCategory(
                 categoryToDelete.getId(),
                 uncategorizedCategory.getId()
         );
-
         categoryRepository.delete(categoryToDelete);
     }
 
@@ -89,11 +76,11 @@ public class CategoryService {
     private void validateCategoryNameNotExists(String name, UUID userId) {
         if (userId != null) {
             if (categoryRepository.existsByNameAndUserId(name, userId)) {
-                throw new InvalidEntryException("Category with name '" + name + "' already exists for this user");
+                throw new InvalidEntryException("Category '" + name + "' already exists for this user");
             }
         } else {
             if (categoryRepository.existsByNameAndIsDefaultTrue(name)) {
-                throw new InvalidEntryException("Default category with name '" + name + "' already exists");
+                throw new InvalidEntryException("Default category '" + name + "' already exists");
             }
         }
     }
@@ -120,26 +107,12 @@ public class CategoryService {
                 .orElseThrow(() -> new InvalidEntryException("Category does not exist"));
     }
 
-    private Category createCategoryEntity(CreateCategoryRequest request, User user) {
-        Category category = new Category();
-        category.setName(request.getName());
-        category.setTransactionType(request.getTransactionType());
-        category.setDefault(request.getUserId() == null);
-        category.setUser(user);
-        return category;
-    }
-
-    private Category saveCategory(Category category) {
-        return categoryRepository.save(category);
-    }
-
     private CreateCategoryResponse mapToCreateCategoryResponse(Category category) {
         return CreateCategoryResponse.builder()
                 .id(category.getId())
                 .name(category.getName())
                 .transactionType(category.getTransactionType())
                 .isDefault(category.isDefault())
-                .userId(category.getUser() != null ? category.getUser().getId() : null)
                 .build();
     }
 }

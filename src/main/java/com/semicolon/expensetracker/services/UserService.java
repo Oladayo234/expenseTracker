@@ -27,42 +27,30 @@ public class UserService {
     private final UserMapper userMapper;
 
     public RegisterUserResponse registerUser(RegisterUserRequest request) {
-        validateEmailNotExists(request.getEmail());
-        setDefaultCurrencyIfNull(request);
-        User user = createUserEntity(request);
-        User savedUser = saveUser(user);
-        return userMapper.toRegisterResponse(savedUser);
+        if (userRepository.findByEmail(request.getEmail()).isPresent()) {
+            throw new InvalidEntryException("User or Email already exists");
+        }
+        if (request.getCurrencyPreference() == null) {
+            request.setCurrencyPreference(Currency.NAIRA);
+        }
+        User user = userMapper.toEntity(request);
+        user.setPassword(encodePassword(request.getPassword()));
+        return userMapper.toRegisterResponse(userRepository.save(user));
     }
 
     public LoginResponse login(LoginRequest request) {
         User user = findUserByUsername(request.getUserName());
-        validatePassword(request.getPassword(), user.getPassword());
+        if (!bCryptPasswordEncoder.matches(request.getPassword(), user.getPassword())) {
+            throw new InvalidEntryException("Wrong password");
+        }
         return userMapper.toLoginResponse(user, jwtService.generateToken(user));
     }
 
     public UpdateUserResponse updateUser(UpdateUserRequest request) {
         User user = findUserById(request.getId());
         updateUserFields(request, user);
-        User savedUser = saveUser(user);
+        User savedUser = userRepository.save(user);
         return userMapper.toUpdateResponse(savedUser, jwtService.generateToken(savedUser));
-    }
-
-    private void validateEmailNotExists(String email) {
-        if (userRepository.findByEmail(email).isPresent()) {
-            throw new InvalidEntryException("User or Email already exists");
-        }
-    }
-
-    private void setDefaultCurrencyIfNull(RegisterUserRequest request) {
-        if (request.getCurrencyPreference() == null) {
-            request.setCurrencyPreference(Currency.NAIRA);
-        }
-    }
-
-    private void validatePassword(String rawPassword, String encodedPassword) {
-        if (!bCryptPasswordEncoder.matches(rawPassword, encodedPassword)) {
-            throw new InvalidEntryException("Wrong password");
-        }
     }
 
     private User findUserById(UUID userId) {
@@ -73,12 +61,6 @@ public class UserService {
     private User findUserByUsername(String username) {
         return userRepository.findByUsername(username)
                 .orElseThrow(() -> new InvalidEntryException("Email or username incorrect"));
-    }
-
-    private User createUserEntity(RegisterUserRequest request) {
-        User user = userMapper.toEntity(request);
-        user.setPassword(encodePassword(request.getPassword()));
-        return user;
     }
 
     private void updateUserFields(UpdateUserRequest request, User user) {
@@ -95,9 +77,5 @@ public class UserService {
 
     private String encodePassword(String rawPassword) {
         return bCryptPasswordEncoder.encode(rawPassword);
-    }
-
-    private User saveUser(User user) {
-        return userRepository.save(user);
     }
 }
