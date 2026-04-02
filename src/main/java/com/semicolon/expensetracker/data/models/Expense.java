@@ -25,10 +25,10 @@ public class Expense {
     private PaymentMethod paymentMethod;
 
     @ManyToOne(optional = false)
-    @JoinColumn(name = "wallet_id")
+    @JoinColumn(name = "wallet_id", nullable = false)
     private Wallet wallet;
 
     @ManyToOne(optional = false)
-    @JoinColumn(name = "category_id")
+    @JoinColumn(name = "category_id", nullable = false)
     private Category category;
 }

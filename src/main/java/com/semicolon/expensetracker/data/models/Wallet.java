@@ -20,7 +20,7 @@ public class Wallet {
     private String name;
     private Currency currency;
 
-    @ManyToOne
-    @JoinColumn(name = "user_id")
+    @ManyToOne(optional = false)
+    @JoinColumn(name = "user_id", nullable = false)
     private User user;
 }
