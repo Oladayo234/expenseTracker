@@ -32,15 +32,15 @@ public class CategoryService {
         Category category = new Category();
         category.setName(request.getName());
         category.setTransactionType(request.getTransactionType());
-        category.setDefault(request.getUserId() == null);
+        category.setDefaultCategory(request.getUserId() == null);
         category.setUser(user);
         return mapToCreateCategoryResponse(categoryRepository.save(category));
     }
 
     public List<CreateCategoryResponse> getCategories(UUID userId) {
         List<Category> categories = userId != null
-                ? categoryRepository.findByUserIdOrIsDefaultTrue(userId)
-                : categoryRepository.findByIsDefaultTrue();
+                ? categoryRepository.findByUserIdOrDefaultCategoryTrue(userId)
+                : categoryRepository.findByDefaultCategoryTrue();
         List<CreateCategoryResponse> responses = new ArrayList<>();
         for (Category category : categories) {
             responses.add(mapToCreateCategoryResponse(category));
@@ -62,12 +62,12 @@ public class CategoryService {
     }
 
     private Category findOrCreateUncategorizedCategory() {
-        return categoryRepository.findByNameAndIsDefaultTrue("Uncategorized")
+        return categoryRepository.findByNameAndDefaultCategoryTrue("Uncategorized")
                 .orElseGet(() -> {
                     Category uncategorized = new Category();
                     uncategorized.setName("Uncategorized");
                     uncategorized.setTransactionType(null);
-                    uncategorized.setDefault(true);
+                    uncategorized.setDefaultCategory(true);
                     uncategorized.setUser(null);
                     return categoryRepository.save(uncategorized);
                 });
@@ -79,20 +79,20 @@ public class CategoryService {
                 throw new InvalidEntryException("Category '" + name + "' already exists for this user");
             }
         } else {
-            if (categoryRepository.existsByNameAndIsDefaultTrue(name)) {
+            if (categoryRepository.existsByNameAndDefaultCategoryTrue(name)) {
                 throw new InvalidEntryException("Default category '" + name + "' already exists");
             }
         }
     }
 
     private void validateCategoryOwnership(Category category, UUID userId) {
-        if (!category.isDefault() && !category.getUser().getId().equals(userId)) {
+        if (!category.isDefaultCategory() && !category.getUser().getId().equals(userId)) {
             throw new InvalidEntryException("You don't have permission to delete this category");
         }
     }
 
     private void validateNotDefaultCategory(Category category) {
-        if (category.isDefault()) {
+        if (category.isDefaultCategory()) {
             throw new InvalidEntryException("Cannot delete default categories");
         }
     }
@@ -112,7 +112,7 @@ public class CategoryService {
                 .id(category.getId())
                 .name(category.getName())
                 .transactionType(category.getTransactionType())
-                .isDefault(category.isDefault())
+                .isDefault(category.isDefaultCategory())
                 .build();
     }
 }

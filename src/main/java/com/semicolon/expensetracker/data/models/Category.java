@@ -17,9 +17,16 @@ public class Category {
     @GeneratedValue(strategy = GenerationType.UUID)
     @EqualsAndHashCode.Include
     private UUID id;
+
+    @Column(nullable = false)
     private String name;
+
     private String icon;
-    private boolean isDefault;
+
+    private boolean defaultCategory;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
     private TransactionType transactionType;
 
     @ManyToOne(optional = true)

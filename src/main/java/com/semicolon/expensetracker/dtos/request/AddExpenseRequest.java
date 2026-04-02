@@ -18,7 +18,7 @@ import java.util.UUID;
 public class AddExpenseRequest {
     @NotNull(message = "walletId is required")
     private UUID walletId;
-    @NotNull(message = "category")
+    @NotNull(message = "category is required")
     private UUID categoryId;
     @NotNull
     @Positive(message = "Amount must be greater than zero")
@@ -29,3 +29,4 @@ public class AddExpenseRequest {
     private UUID userId;
     private LocalDateTime expenseDate;
 }
+

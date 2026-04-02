@@ -149,7 +149,7 @@ public class ExpenseService {
     }
 
     private void validateCategoryAccess(Category category, UUID userId) {
-        if (!category.isDefault() && category.getUser() != null && !category.getUser().getId().equals(userId)) {
+        if (!category.isDefaultCategory() && category.getUser() != null && !category.getUser().getId().equals(userId)) {
             throw new InvalidEntryException("Category does not belong to this user");
         }
     }

@@ -3,20 +3,24 @@ package com.semicolon.expensetracker.services;
 import com.semicolon.expensetracker.data.models.User;
 import com.semicolon.expensetracker.data.models.enums.Currency;
 import com.semicolon.expensetracker.data.repositories.UserRepository;
+import com.semicolon.expensetracker.dtos.request.ChangePasswordRequest;
 import com.semicolon.expensetracker.dtos.request.LoginRequest;
 import com.semicolon.expensetracker.dtos.request.RegisterUserRequest;
 import com.semicolon.expensetracker.dtos.request.UpdateUserRequest;
 import com.semicolon.expensetracker.dtos.response.LoginResponse;
 import com.semicolon.expensetracker.dtos.response.RegisterUserResponse;
 import com.semicolon.expensetracker.dtos.response.UpdateUserResponse;
+import com.semicolon.expensetracker.exceptions.BadRequestException;
 import com.semicolon.expensetracker.exceptions.InvalidEntryException;
+import com.semicolon.expensetracker.exceptions.ResourceNotFoundException;
 import com.semicolon.expensetracker.security.JwtService;
 import com.semicolon.expensetracker.utils.mappers.UserMapper;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 
-import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -47,15 +51,22 @@ public class UserService {
     }
 
     public UpdateUserResponse updateUser(UpdateUserRequest request) {
-        User user = findUserById(request.getId());
+        User user = getCurrentUser();
         updateUserFields(request, user);
         User savedUser = userRepository.save(user);
         return userMapper.toUpdateResponse(savedUser, jwtService.generateToken(savedUser));
     }
 
-    private User findUserById(UUID userId) {
-        return userRepository.findById(userId)
-                .orElseThrow(() -> new InvalidEntryException("User not found"));
+    public void changePassword(ChangePasswordRequest request) {
+        User user = getCurrentUser();
+        if (!bCryptPasswordEncoder.matches(request.getCurrentPassword(), user.getPassword())) {
+            throw new InvalidEntryException("Current password is incorrect");
+        }
+        if (!request.getNewPassword().equals(request.getConfirmPassword())) {
+            throw new InvalidEntryException("New passwords do not match");
+        }
+        user.setPassword(bCryptPasswordEncoder.encode(request.getNewPassword()));
+        userRepository.save(user);
     }
 
     private User findUserByUsername(String username) {
@@ -64,8 +75,8 @@ public class UserService {
     }
 
     private void updateUserFields(UpdateUserRequest request, User user) {
-        if (request.getPassword() != null) {
-            user.setPassword(encodePassword(request.getPassword()));
+        if (request.getUserName() != null) {
+            user.setUsername(request.getUserName());
         }
         if (request.getPhoneNumber() != null) {
             user.setPhoneNumber(request.getPhoneNumber());
@@ -73,6 +84,16 @@ public class UserService {
         if (request.getEmail() != null) {
             user.setEmail(request.getEmail());
         }
+    }
+
+    private User getCurrentUser() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null || !authentication.isAuthenticated()) {
+            throw new BadRequestException("User is not authenticated");
+        }
+        String email = authentication.getName();
+        return userRepository.findByEmail(email)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
     }
 
     private String encodePassword(String rawPassword) {

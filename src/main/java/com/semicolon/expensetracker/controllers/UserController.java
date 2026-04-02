@@ -1,5 +1,6 @@
 package com.semicolon.expensetracker.controllers;
 
+import com.semicolon.expensetracker.dtos.request.ChangePasswordRequest;
 import com.semicolon.expensetracker.dtos.request.LoginRequest;
 import com.semicolon.expensetracker.dtos.request.RegisterUserRequest;
 import com.semicolon.expensetracker.dtos.request.UpdateUserRequest;
@@ -34,4 +35,11 @@ public class UserController {
     public ResponseEntity<UpdateUserResponse> update(@Valid @RequestBody UpdateUserRequest request) {
         return ResponseEntity.ok(userService.updateUser(request));
     }
+
+    @PatchMapping("/change-password")
+    public ResponseEntity<String> changePassword(@Valid @RequestBody ChangePasswordRequest request) {
+        userService.changePassword(request);
+        return ResponseEntity.ok("Password changed successfully");
+    }
+
 }
