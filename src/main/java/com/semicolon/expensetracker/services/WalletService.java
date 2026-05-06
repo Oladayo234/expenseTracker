@@ -3,6 +3,7 @@ package com.semicolon.expensetracker.services;
 import com.semicolon.expensetracker.data.models.User;
 import com.semicolon.expensetracker.data.models.Wallet;
 import com.semicolon.expensetracker.data.models.enums.Currency;
+import com.semicolon.expensetracker.data.models.enums.TransactionType;
 import com.semicolon.expensetracker.data.repositories.ExpenseRepository;
 import com.semicolon.expensetracker.data.repositories.UserRepository;
 import com.semicolon.expensetracker.data.repositories.WalletRepository;
@@ -20,6 +21,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
+import static java.util.List.of;
+
 @Service
 @RequiredArgsConstructor
 public class WalletService {
@@ -30,7 +33,7 @@ public class WalletService {
     private final WalletMapper walletMapper;
 
     public CreateWalletResponse createWallet(CreateWalletRequest request) {
-        User user = findUserById(request.getUserId());
+        User user = validateWithUserId(request.getUserId());
         Wallet wallet = new Wallet();
         wallet.setUser(user);
         wallet.setCurrency(request.getCurrency() != null ? request.getCurrency() : Currency.NAIRA);
@@ -44,7 +47,7 @@ public class WalletService {
     }
 
     public List<WalletResponse> getWalletsByUser(UUID userId) {
-        findUserById(userId);
+        validateWithUserId(userId);
         List<Wallet> wallets = walletRepository.findByUserId(userId);
         List<WalletResponse> responses = new ArrayList<>();
         for (Wallet wallet : wallets) {
@@ -54,17 +57,20 @@ public class WalletService {
     }
 
     public WalletBalanceResponse getWalletBalance(UUID walletId) {
-        Wallet wallet = findWalletById(walletId);
-        BigDecimal balance = expenseRepository.sumAmountByWalletId(walletId).orElse(BigDecimal.ZERO);
-        return walletMapper.toWalletBalanceResponse(wallet, balance);
+        Wallet wallet = validateWithWalletById(walletId);
+        BigDecimal inflow = expenseRepository.sumByWalletIdAndTypes(walletId,
+                of(TransactionType.INFLOW)).orElse(BigDecimal.ZERO);
+        BigDecimal outflow = expenseRepository.sumByWalletIdAndTypes(walletId,
+                of(TransactionType.OUTFLOW, TransactionType.OUTFLOW_FIXED_COST, TransactionType.OUTFLOW_VARIABLE_COST)).orElse(BigDecimal.ZERO);
+        return walletMapper.toWalletBalanceResponse(wallet, inflow.subtract(outflow));
     }
 
-    private User findUserById(UUID userId) {
+    private User validateWithUserId(UUID userId) {
         return userRepository.findById(userId)
                 .orElseThrow(() -> new InvalidEntryException("User does not exist"));
     }
 
-    private Wallet findWalletById(UUID walletId) {
+    private Wallet validateWithWalletById(UUID walletId) {
         return walletRepository.findById(walletId)
                 .orElseThrow(() -> new InvalidEntryException("Wallet does not exist"));
     }

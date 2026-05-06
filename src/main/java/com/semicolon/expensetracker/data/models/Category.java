@@ -26,7 +26,6 @@ public class Category {
     private boolean defaultCategory;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
     private TransactionType transactionType;
 
     @ManyToOne(optional = true)

@@ -10,7 +10,7 @@ import org.springframework.stereotype.Component;
 @Component
 public class UserMapper {
 
-    public User toEntity(RegisterUserRequest request) {
+    public User toRegisterUser(RegisterUserRequest request) {
         User user = new User();
         user.setName(request.getName());
         user.setUsername(request.getUserName());

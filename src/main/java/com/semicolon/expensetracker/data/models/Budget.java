@@ -19,7 +19,8 @@ public class Budget {
     @GeneratedValue(strategy = GenerationType.UUID)
     @EqualsAndHashCode.Include
     private UUID id;
-    private BigDecimal monthlyTarget;
+    private String budgetName;
+    private BigDecimal budgetAmount;
 
     @Column(name = "month_year")
     @Convert(converter = YearMonthConverter.class)

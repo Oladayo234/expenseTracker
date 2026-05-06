@@ -9,6 +9,7 @@ import com.semicolon.expensetracker.dtos.request.CreateCategoryRequest;
 import com.semicolon.expensetracker.dtos.request.DeleteCategoryRequest;
 import com.semicolon.expensetracker.dtos.response.CreateCategoryResponse;
 import com.semicolon.expensetracker.exceptions.InvalidEntryException;
+import com.semicolon.expensetracker.utils.mappers.CategoryMapper;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -24,17 +25,18 @@ public class CategoryService {
     private final CategoryRepository categoryRepository;
     private final UserRepository userRepository;
     private final ExpenseRepository expenseRepository;
+    private final CategoryMapper categoryMapper;
 
     @Transactional
     public CreateCategoryResponse createCategory(CreateCategoryRequest request) {
         validateCategoryNameNotExists(request.getName(), request.getUserId());
-        User user = request.getUserId() != null ? findUserById(request.getUserId()) : null;
+        User user = request.getUserId() != null ? validateUserById(request.getUserId()) : null;
         Category category = new Category();
         category.setName(request.getName());
         category.setTransactionType(request.getTransactionType());
         category.setDefaultCategory(request.getUserId() == null);
         category.setUser(user);
-        return mapToCreateCategoryResponse(categoryRepository.save(category));
+        return categoryMapper.toResponse(categoryRepository.save(category));
     }
 
     public List<CreateCategoryResponse> getCategories(UUID userId) {
@@ -43,14 +45,14 @@ public class CategoryService {
                 : categoryRepository.findByDefaultCategoryTrue();
         List<CreateCategoryResponse> responses = new ArrayList<>();
         for (Category category : categories) {
-            responses.add(mapToCreateCategoryResponse(category));
+            responses.add(categoryMapper.toResponse(category));
         }
         return responses;
     }
 
     @Transactional
     public void deleteCategory(DeleteCategoryRequest request) {
-        Category categoryToDelete = findCategoryById(request.getCategoryId());
+        Category categoryToDelete = validateCategoryById(request.getCategoryId());
         validateCategoryOwnership(categoryToDelete, request.getUserId());
         validateNotDefaultCategory(categoryToDelete);
         Category uncategorizedCategory = findOrCreateUncategorizedCategory();
@@ -97,22 +99,13 @@ public class CategoryService {
         }
     }
 
-    private User findUserById(UUID userId) {
+    private User validateUserById(UUID userId) {
         return userRepository.findById(userId)
                 .orElseThrow(() -> new InvalidEntryException("User does not exist"));
     }
 
-    private Category findCategoryById(UUID categoryId) {
+    private Category validateCategoryById(UUID categoryId) {
         return categoryRepository.findById(categoryId)
                 .orElseThrow(() -> new InvalidEntryException("Category does not exist"));
-    }
-
-    private CreateCategoryResponse mapToCreateCategoryResponse(Category category) {
-        return CreateCategoryResponse.builder()
-                .id(category.getId())
-                .name(category.getName())
-                .transactionType(category.getTransactionType())
-                .isDefault(category.isDefaultCategory())
-                .build();
     }
 }

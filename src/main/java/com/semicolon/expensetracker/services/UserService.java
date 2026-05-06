@@ -34,10 +34,14 @@ public class UserService {
         if (userRepository.findByEmail(request.getEmail()).isPresent()) {
             throw new InvalidEntryException("User or Email already exists");
         }
+        if(userRepository.findByUsername(request.getUserName()).isPresent()){
+            throw new InvalidEntryException("Username already exists");
+        }
+
         if (request.getCurrencyPreference() == null) {
             request.setCurrencyPreference(Currency.NAIRA);
         }
-        User user = userMapper.toEntity(request);
+        User user = userMapper.toRegisterUser(request);
         user.setPassword(encodePassword(request.getPassword()));
         return userMapper.toRegisterResponse(userRepository.save(user));
     }
@@ -45,7 +49,7 @@ public class UserService {
     public LoginResponse login(LoginRequest request) {
         User user = findUserByUsername(request.getUserName());
         if (!bCryptPasswordEncoder.matches(request.getPassword(), user.getPassword())) {
-            throw new InvalidEntryException("Wrong password");
+            throw new InvalidEntryException("wrong email or password");
         }
         return userMapper.toLoginResponse(user, jwtService.generateToken(user));
     }

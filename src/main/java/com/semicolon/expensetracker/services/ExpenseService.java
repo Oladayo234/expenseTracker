@@ -13,6 +13,7 @@ import com.semicolon.expensetracker.dtos.response.AddExpenseResponse;
 import com.semicolon.expensetracker.dtos.response.CategoryBreakdownResponse;
 import com.semicolon.expensetracker.dtos.response.MonthlySummaryResponse;
 import com.semicolon.expensetracker.exceptions.InvalidEntryException;
+import com.semicolon.expensetracker.utils.mappers.ExpenseMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -32,6 +33,7 @@ public class ExpenseService {
     private final UserRepository userRepository;
     private final WalletRepository walletRepository;
     private final CategoryRepository categoryRepository;
+    private final ExpenseMapper expenseMapper;
 
     @Transactional
     public AddExpenseResponse addExpense(AddExpenseRequest request) {
@@ -47,7 +49,7 @@ public class ExpenseService {
         expense.setNote(request.getNote());
         expense.setPaymentMethod(request.getPaymentMethod());
         expense.setExpenseDate(request.getExpenseDate() != null ? request.getExpenseDate() : LocalDateTime.now());
-        return buildAddExpenseResponse(expenseRepository.save(expense));
+        return expenseMapper.toResponse(expenseRepository.save(expense));
     }
 
     @Transactional
@@ -65,7 +67,7 @@ public class ExpenseService {
         List<Expense> expenses = expenseRepository.findByWalletIdOrderByExpenseDateDesc(walletId);
         List<AddExpenseResponse> responses = new ArrayList<>();
         for (Expense expense : expenses) {
-            responses.add(buildAddExpenseResponse(expense));
+            responses.add(expenseMapper.toResponse(expense));
         }
         return responses;
     }
@@ -76,20 +78,19 @@ public class ExpenseService {
         List<Expense> expenses = expenseRepository.findByCategoryIdOrderByExpenseDateDesc(categoryId);
         List<AddExpenseResponse> responses = new ArrayList<>();
         for (Expense expense : expenses) {
-            responses.add(buildAddExpenseResponse(expense));
+            responses.add(expenseMapper.toResponse(expense));
         }
         return responses;
     }
 
-    public List<AddExpenseResponse> getExpensesByDateRange(UUID walletId, UUID userId,
-                                                           LocalDateTime startDate, LocalDateTime endDate) {
+    public List<AddExpenseResponse> getExpensesByDateRange(UUID walletId, UUID userId, LocalDateTime startDate, LocalDateTime endDate) {
         Wallet wallet = findWalletById(walletId);
         validateWalletOwnership(wallet, userId);
         List<Expense> expenses = expenseRepository.findByWalletIdAndExpenseDateBetweenOrderByExpenseDateDesc(
                 walletId, startDate, endDate);
         List<AddExpenseResponse> responses = new ArrayList<>();
         for (Expense expense : expenses) {
-            responses.add(buildAddExpenseResponse(expense));
+            responses.add(expenseMapper.toResponse(expense));
         }
         return responses;
     }
@@ -99,17 +100,19 @@ public class ExpenseService {
         LocalDateTime startDate = yearMonth.atDay(1).atStartOfDay();
         LocalDateTime endDate = yearMonth.atEndOfMonth().atTime(23, 59, 59);
         validateUserExists(userId);
+
         List<Expense> expenses = expenseRepository.findByWalletUserIdAndExpenseDateBetween(userId, startDate, endDate);
         BigDecimal totalInflow = BigDecimal.ZERO;
         BigDecimal totalFixedOutflow = BigDecimal.ZERO;
         BigDecimal totalVariableOutflow = BigDecimal.ZERO;
         for (Expense expense : expenses) {
-            Category category = expense.getCategory();
-            if (category.getTransactionType() == TransactionType.INFLOW) {
+            TransactionType type = expense.getCategory().getTransactionType();
+            if (type == null) continue;
+            if (type == TransactionType.INFLOW) {
                 totalInflow = totalInflow.add(expense.getAmount());
-            } else if (category.getTransactionType() == TransactionType.OUTFLOW_FIXED_COST) {
+            } else if (type == TransactionType.OUTFLOW_FIXED_COST) {
                 totalFixedOutflow = totalFixedOutflow.add(expense.getAmount());
-            } else if (category.getTransactionType() == TransactionType.OUTFLOW_VARIABLE_COST) {
+            } else if (type == TransactionType.OUTFLOW_VARIABLE_COST || type == TransactionType.OUTFLOW) {
                 totalVariableOutflow = totalVariableOutflow.add(expense.getAmount());
             }
         }
@@ -119,7 +122,7 @@ public class ExpenseService {
                 .year(year)
                 .month(month)
                 .totalIncome(totalInflow)
-                .totalExpenses(totalFixedOutflow.add(totalVariableOutflow))
+                .totalExpenses(totalOutflow)
                 .netAmount(netIncome)
                 .build();
     }
@@ -173,19 +176,5 @@ public class ExpenseService {
     private Expense findExpenseById(UUID expenseId) {
         return expenseRepository.findById(expenseId)
                 .orElseThrow(() -> new InvalidEntryException("Expense does not exist"));
-    }
-
-    private AddExpenseResponse buildAddExpenseResponse(Expense expense) {
-        AddExpenseResponse response = new AddExpenseResponse();
-        response.setId(expense.getId());
-        response.setWalletId(expense.getWallet().getId());
-        response.setCategoryId(expense.getCategory().getId());
-        response.setCategoryName(expense.getCategory().getName());
-        response.setAmount(expense.getAmount());
-        response.setNote(expense.getNote());
-        response.setPaymentMethod(expense.getPaymentMethod());
-        response.setExpenseDate(expense.getExpenseDate());
-        response.setMessage("Expense added successfully");
-        return response;
     }
 }

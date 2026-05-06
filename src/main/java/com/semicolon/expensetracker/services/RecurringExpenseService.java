@@ -11,6 +11,7 @@ import com.semicolon.expensetracker.data.repositories.WalletRepository;
 import com.semicolon.expensetracker.dtos.request.AddRecurringExpenseRequest;
 import com.semicolon.expensetracker.dtos.response.RecurringExpenseResponse;
 import com.semicolon.expensetracker.exceptions.InvalidEntryException;
+import com.semicolon.expensetracker.utils.mappers.RecurringExpenseMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -28,6 +29,7 @@ public class RecurringExpenseService {
     private final UserRepository userRepository;
     private final WalletRepository walletRepository;
     private final CategoryRepository categoryRepository;
+    private final RecurringExpenseMapper recurringExpenseMapper;
 
     @Transactional
     public RecurringExpenseResponse createRecurringExpense(AddRecurringExpenseRequest request) {
@@ -47,7 +49,7 @@ public class RecurringExpenseService {
         recurringExpense.setWallet(wallet);
         recurringExpense.setCategory(category);
         recurringExpense.setUser(user);
-        return toResponse(recurringExpensesRepository.save(recurringExpense));
+        return recurringExpenseMapper.toResponse(recurringExpensesRepository.save(recurringExpense));
     }
 
     public List<RecurringExpenseResponse> getRecurringExpensesByUser(UUID userId) {
@@ -57,7 +59,7 @@ public class RecurringExpenseService {
         List<RecurringExpenses> expenses = recurringExpensesRepository.findByUserId(userId);
         List<RecurringExpenseResponse> responses = new ArrayList<>();
         for (RecurringExpenses expense : expenses) {
-            responses.add(toResponse(expense));
+            responses.add(recurringExpenseMapper.toResponse(expense));
         }
         return responses;
     }
@@ -70,18 +72,5 @@ public class RecurringExpenseService {
             throw new InvalidEntryException("Recurring expense does not belong to this user");
         }
         recurringExpensesRepository.delete(expense);
-    }
-
-    private RecurringExpenseResponse toResponse(RecurringExpenses expense) {
-        RecurringExpenseResponse response = new RecurringExpenseResponse();
-        response.setId(expense.getId());
-        response.setAmount(expense.getAmount());
-        response.setFrequency(expense.getFrequency());
-        response.setNextDueDate(expense.getNextDueDate());
-        response.setWalletId(expense.getWallet().getId());
-        response.setCategoryId(expense.getCategory().getId());
-        response.setCategoryName(expense.getCategory().getName());
-        response.setMessage("Success");
-        return response;
     }
 }

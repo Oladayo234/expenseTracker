@@ -17,6 +17,8 @@ public class Wallet {
     @GeneratedValue(strategy = GenerationType.UUID)
     @EqualsAndHashCode.Include
     private UUID id;
+
+    @Column(nullable = false)
     private String name;
     private Currency currency;
 
