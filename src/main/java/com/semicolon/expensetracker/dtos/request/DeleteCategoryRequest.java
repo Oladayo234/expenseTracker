@@ -1,11 +1,14 @@
 package com.semicolon.expensetracker.dtos.request;
 
-import lombok.Data;
+import jakarta.validation.constraints.NotNull;
+import lombok.Getter;
+import lombok.Setter;
 
 import java.util.UUID;
 
-@Data
+@Getter
+@Setter
 public class DeleteCategoryRequest {
+    @NotNull(message = "categoryId is required")
     private UUID categoryId;
-    private UUID userId;
 }

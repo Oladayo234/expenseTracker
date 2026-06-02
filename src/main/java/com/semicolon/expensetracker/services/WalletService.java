@@ -5,13 +5,13 @@ import com.semicolon.expensetracker.data.models.Wallet;
 import com.semicolon.expensetracker.data.models.enums.Currency;
 import com.semicolon.expensetracker.data.models.enums.TransactionType;
 import com.semicolon.expensetracker.data.repositories.ExpenseRepository;
-import com.semicolon.expensetracker.data.repositories.UserRepository;
 import com.semicolon.expensetracker.data.repositories.WalletRepository;
 import com.semicolon.expensetracker.dtos.request.CreateWalletRequest;
 import com.semicolon.expensetracker.dtos.response.CreateWalletResponse;
 import com.semicolon.expensetracker.dtos.response.WalletBalanceResponse;
 import com.semicolon.expensetracker.dtos.response.WalletResponse;
 import com.semicolon.expensetracker.exceptions.InvalidEntryException;
+import com.semicolon.expensetracker.utils.AuthUtils;
 import com.semicolon.expensetracker.utils.mappers.WalletMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -27,27 +27,27 @@ import static java.util.List.of;
 @RequiredArgsConstructor
 public class WalletService {
 
-    private final UserRepository userRepository;
     private final WalletRepository walletRepository;
     private final ExpenseRepository expenseRepository;
     private final WalletMapper walletMapper;
 
     public CreateWalletResponse createWallet(CreateWalletRequest request) {
-        User user = validateWithUserId(request.getUserId());
+        User user = AuthUtils.getCurrentUser();
         Wallet wallet = new Wallet();
         wallet.setUser(user);
         wallet.setCurrency(request.getCurrency() != null ? request.getCurrency() : Currency.NAIRA);
         wallet.setName(request.getName());
-        Wallet savedWallet = walletRepository.save(wallet);
+        Wallet saved = walletRepository.save(wallet);
         CreateWalletResponse response = new CreateWalletResponse();
-        response.setName(savedWallet.getName());
-        response.setCurrency(savedWallet.getCurrency());
+        response.setId(saved.getId());
+        response.setName(saved.getName());
+        response.setCurrency(saved.getCurrency());
         response.setMessage("Wallet created successfully");
         return response;
     }
 
-    public List<WalletResponse> getWalletsByUser(UUID userId) {
-        validateWithUserId(userId);
+    public List<WalletResponse> getWalletsByUser() {
+        UUID userId = AuthUtils.getCurrentUserId();
         List<Wallet> wallets = walletRepository.findByUserId(userId);
         List<WalletResponse> responses = new ArrayList<>();
         for (Wallet wallet : wallets) {
@@ -57,21 +57,20 @@ public class WalletService {
     }
 
     public WalletBalanceResponse getWalletBalance(UUID walletId) {
-        Wallet wallet = validateWithWalletById(walletId);
+        Wallet wallet = walletRepository.findById(walletId)
+                .orElseThrow(() -> new InvalidEntryException("Wallet does not exist"));
+        validateOwnership(wallet);
         BigDecimal inflow = expenseRepository.sumByWalletIdAndTypes(walletId,
                 of(TransactionType.INFLOW)).orElse(BigDecimal.ZERO);
         BigDecimal outflow = expenseRepository.sumByWalletIdAndTypes(walletId,
-                of(TransactionType.OUTFLOW, TransactionType.OUTFLOW_FIXED_COST, TransactionType.OUTFLOW_VARIABLE_COST)).orElse(BigDecimal.ZERO);
+                of(TransactionType.OUTFLOW, TransactionType.OUTFLOW_FIXED_COST,
+                        TransactionType.OUTFLOW_VARIABLE_COST)).orElse(BigDecimal.ZERO);
         return walletMapper.toWalletBalanceResponse(wallet, inflow.subtract(outflow));
     }
 
-    private User validateWithUserId(UUID userId) {
-        return userRepository.findById(userId)
-                .orElseThrow(() -> new InvalidEntryException("User does not exist"));
-    }
-
-    private Wallet validateWithWalletById(UUID walletId) {
-        return walletRepository.findById(walletId)
-                .orElseThrow(() -> new InvalidEntryException("Wallet does not exist"));
+    private void validateOwnership(Wallet wallet) {
+        if (!wallet.getUser().getId().equals(AuthUtils.getCurrentUserId())) {
+            throw new InvalidEntryException("Wallet does not belong to this user");
+        }
     }
 }

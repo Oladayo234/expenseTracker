@@ -6,13 +6,13 @@ import com.semicolon.expensetracker.data.models.Wallet;
 import com.semicolon.expensetracker.data.models.enums.TransactionType;
 import com.semicolon.expensetracker.data.repositories.CategoryRepository;
 import com.semicolon.expensetracker.data.repositories.ExpenseRepository;
-import com.semicolon.expensetracker.data.repositories.UserRepository;
 import com.semicolon.expensetracker.data.repositories.WalletRepository;
 import com.semicolon.expensetracker.dtos.request.AddExpenseRequest;
 import com.semicolon.expensetracker.dtos.response.AddExpenseResponse;
 import com.semicolon.expensetracker.dtos.response.CategoryBreakdownResponse;
 import com.semicolon.expensetracker.dtos.response.MonthlySummaryResponse;
 import com.semicolon.expensetracker.exceptions.InvalidEntryException;
+import com.semicolon.expensetracker.utils.AuthUtils;
 import com.semicolon.expensetracker.utils.mappers.ExpenseMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -30,117 +30,119 @@ import java.util.UUID;
 public class ExpenseService {
 
     private final ExpenseRepository expenseRepository;
-    private final UserRepository userRepository;
     private final WalletRepository walletRepository;
     private final CategoryRepository categoryRepository;
     private final ExpenseMapper expenseMapper;
 
     @Transactional
     public AddExpenseResponse addExpense(AddExpenseRequest request) {
-        validateUserExists(request.getUserId());
+        UUID userId = AuthUtils.getCurrentUserId();
         Wallet wallet = findWalletById(request.getWalletId());
+        validateWalletOwnership(wallet, userId);
         Category category = findCategoryById(request.getCategoryId());
-        validateWalletOwnership(wallet, request.getUserId());
-        validateCategoryAccess(category, request.getUserId());
+        validateCategoryAccess(category, userId);
         Expense expense = new Expense();
         expense.setWallet(wallet);
         expense.setCategory(category);
         expense.setAmount(request.getAmount());
         expense.setNote(request.getNote());
         expense.setPaymentMethod(request.getPaymentMethod());
-        expense.setExpenseDate(request.getExpenseDate() != null ? request.getExpenseDate() : LocalDateTime.now());
+        expense.setExpenseDate(request.getExpenseDate() != null
+                ? request.getExpenseDate() : LocalDateTime.now());
         return expenseMapper.toResponse(expenseRepository.save(expense));
     }
 
     @Transactional
-    public void deleteExpense(UUID expenseId, UUID userId) {
-        Expense expense = findExpenseById(expenseId);
+    public void deleteExpense(UUID expenseId) {
+        UUID userId = AuthUtils.getCurrentUserId();
+        Expense expense = expenseRepository.findById(expenseId)
+                .orElseThrow(() -> new InvalidEntryException("Expense does not exist"));
         if (!expense.getWallet().getUser().getId().equals(userId)) {
             throw new InvalidEntryException("Expense does not belong to this user");
         }
         expenseRepository.delete(expense);
     }
 
-    public List<AddExpenseResponse> getExpensesByWallet(UUID walletId, UUID userId) {
+    public List<AddExpenseResponse> getExpensesByWallet(UUID walletId) {
+        UUID userId = AuthUtils.getCurrentUserId();
         Wallet wallet = findWalletById(walletId);
         validateWalletOwnership(wallet, userId);
-        List<Expense> expenses = expenseRepository.findByWalletIdOrderByExpenseDateDesc(walletId);
         List<AddExpenseResponse> responses = new ArrayList<>();
-        for (Expense expense : expenses) {
-            responses.add(expenseMapper.toResponse(expense));
+        for (Expense e : expenseRepository.findByWalletIdOrderByExpenseDateDesc(walletId)) {
+            responses.add(expenseMapper.toResponse(e));
         }
         return responses;
     }
 
-    public List<AddExpenseResponse> getExpensesByCategory(UUID categoryId, UUID userId) {
+    public List<AddExpenseResponse> getExpensesByCategory(UUID categoryId) {
+        UUID userId = AuthUtils.getCurrentUserId();
         Category category = findCategoryById(categoryId);
         validateCategoryAccess(category, userId);
-        List<Expense> expenses = expenseRepository.findByCategoryIdOrderByExpenseDateDesc(categoryId);
         List<AddExpenseResponse> responses = new ArrayList<>();
-        for (Expense expense : expenses) {
-            responses.add(expenseMapper.toResponse(expense));
+        for (Expense e : expenseRepository.findByCategoryIdOrderByExpenseDateDesc(categoryId)) {
+            responses.add(expenseMapper.toResponse(e));
         }
         return responses;
     }
 
-    public List<AddExpenseResponse> getExpensesByDateRange(UUID walletId, UUID userId, LocalDateTime startDate, LocalDateTime endDate) {
+    public List<AddExpenseResponse> getExpensesByDateRange(UUID walletId,
+                                                           LocalDateTime start,
+                                                           LocalDateTime end) {
+        UUID userId = AuthUtils.getCurrentUserId();
         Wallet wallet = findWalletById(walletId);
         validateWalletOwnership(wallet, userId);
-        List<Expense> expenses = expenseRepository.findByWalletIdAndExpenseDateBetweenOrderByExpenseDateDesc(
-                walletId, startDate, endDate);
         List<AddExpenseResponse> responses = new ArrayList<>();
-        for (Expense expense : expenses) {
-            responses.add(expenseMapper.toResponse(expense));
+        for (Expense e : expenseRepository
+                .findByWalletIdAndExpenseDateBetweenOrderByExpenseDateDesc(walletId, start, end)) {
+            responses.add(expenseMapper.toResponse(e));
         }
         return responses;
     }
 
-    public MonthlySummaryResponse getMonthlySummary(UUID userId, int year, int month) {
+    public MonthlySummaryResponse getMonthlySummary(int year, int month) {
+        UUID userId = AuthUtils.getCurrentUserId();
         YearMonth yearMonth = YearMonth.of(year, month);
-        LocalDateTime startDate = yearMonth.atDay(1).atStartOfDay();
-        LocalDateTime endDate = yearMonth.atEndOfMonth().atTime(23, 59, 59);
-        validateUserExists(userId);
-
-        List<Expense> expenses = expenseRepository.findByWalletUserIdAndExpenseDateBetween(userId, startDate, endDate);
+        LocalDateTime start = yearMonth.atDay(1).atStartOfDay();
+        LocalDateTime end = yearMonth.atEndOfMonth().atTime(23, 59, 59);
+        List<Expense> expenses = expenseRepository
+                .findByWalletUserIdAndExpenseDateBetween(userId, start, end);
         BigDecimal totalInflow = BigDecimal.ZERO;
         BigDecimal totalFixedOutflow = BigDecimal.ZERO;
         BigDecimal totalVariableOutflow = BigDecimal.ZERO;
         for (Expense expense : expenses) {
             TransactionType type = expense.getCategory().getTransactionType();
             if (type == null) continue;
-            if (type == TransactionType.INFLOW) {
-                totalInflow = totalInflow.add(expense.getAmount());
-            } else if (type == TransactionType.OUTFLOW_FIXED_COST) {
-                totalFixedOutflow = totalFixedOutflow.add(expense.getAmount());
-            } else if (type == TransactionType.OUTFLOW_VARIABLE_COST || type == TransactionType.OUTFLOW) {
-                totalVariableOutflow = totalVariableOutflow.add(expense.getAmount());
+            switch (type) {
+                case INFLOW -> totalInflow = totalInflow.add(expense.getAmount());
+                case OUTFLOW_FIXED_COST ->
+                        totalFixedOutflow = totalFixedOutflow.add(expense.getAmount());
+                case OUTFLOW, OUTFLOW_VARIABLE_COST ->
+                        totalVariableOutflow = totalVariableOutflow.add(expense.getAmount());
             }
         }
         BigDecimal totalOutflow = totalFixedOutflow.add(totalVariableOutflow);
-        BigDecimal netIncome = totalInflow.subtract(totalOutflow);
         return MonthlySummaryResponse.builder()
-                .year(year)
-                .month(month)
+                .year(year).month(month)
                 .totalIncome(totalInflow)
                 .totalExpenses(totalOutflow)
-                .netAmount(netIncome)
+                .netAmount(totalInflow.subtract(totalOutflow))
                 .build();
     }
 
-    public List<CategoryBreakdownResponse> getCategoryBreakdown(UUID userId, int year, int month) {
+    public List<CategoryBreakdownResponse> getCategoryBreakdown(int year, int month) {
+        UUID userId = AuthUtils.getCurrentUserId();
         YearMonth yearMonth = YearMonth.of(year, month);
-        LocalDateTime startDate = yearMonth.atDay(1).atStartOfDay();
-        LocalDateTime endDate = yearMonth.atEndOfMonth().atTime(23, 59, 59);
-        validateUserExists(userId);
-        List<Object[]> results = expenseRepository.findCategoryBreakdownByUserIdAndDateRange(userId, startDate, endDate);
+        LocalDateTime start = yearMonth.atDay(1).atStartOfDay();
+        LocalDateTime end = yearMonth.atEndOfMonth().atTime(23, 59, 59);
+        List<Object[]> results = expenseRepository
+                .findCategoryBreakdownByUserIdAndDateRange(userId, start, end);
         List<CategoryBreakdownResponse> breakdown = new ArrayList<>();
         for (Object[] result : results) {
-            CategoryBreakdownResponse response = CategoryBreakdownResponse.builder()
+            breakdown.add(CategoryBreakdownResponse.builder()
                     .categoryId((UUID) result[0])
                     .categoryName((String) result[1])
                     .totalAmount((BigDecimal) result[3])
-                    .build();
-            breakdown.add(response);
+                    .build());
         }
         return breakdown;
     }
@@ -152,14 +154,9 @@ public class ExpenseService {
     }
 
     private void validateCategoryAccess(Category category, UUID userId) {
-        if (!category.isDefaultCategory() && category.getUser() != null && !category.getUser().getId().equals(userId)) {
+        if (!category.isDefaultCategory() && category.getUser() != null
+                && !category.getUser().getId().equals(userId)) {
             throw new InvalidEntryException("Category does not belong to this user");
-        }
-    }
-
-    private void validateUserExists(UUID userId) {
-        if (!userRepository.existsById(userId)) {
-            throw new InvalidEntryException("User does not exist");
         }
     }
 
@@ -171,10 +168,5 @@ public class ExpenseService {
     private Category findCategoryById(UUID categoryId) {
         return categoryRepository.findById(categoryId)
                 .orElseThrow(() -> new InvalidEntryException("Category does not exist"));
-    }
-
-    private Expense findExpenseById(UUID expenseId) {
-        return expenseRepository.findById(expenseId)
-                .orElseThrow(() -> new InvalidEntryException("Expense does not exist"));
     }
 }

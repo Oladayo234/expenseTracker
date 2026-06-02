@@ -1,20 +1,17 @@
 package com.semicolon.expensetracker.dtos.request;
 
 import com.semicolon.expensetracker.data.models.enums.PaymentMethod;
-import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.Getter;
+import lombok.Setter;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
-@Data
-@NoArgsConstructor
-@AllArgsConstructor
+@Getter
+@Setter
 public class AddExpenseRequest {
     @NotNull(message = "walletId is required")
     private UUID walletId;
@@ -26,7 +23,5 @@ public class AddExpenseRequest {
     private String note;
     @NotNull(message = "payment method is required")
     private PaymentMethod paymentMethod;
-    private UUID userId;
     private LocalDateTime expenseDate;
 }
-

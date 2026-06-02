@@ -6,11 +6,11 @@ import com.semicolon.expensetracker.data.models.User;
 import com.semicolon.expensetracker.data.repositories.BudgetRepository;
 import com.semicolon.expensetracker.data.repositories.CategoryRepository;
 import com.semicolon.expensetracker.data.repositories.ExpenseRepository;
-import com.semicolon.expensetracker.data.repositories.UserRepository;
 import com.semicolon.expensetracker.dtos.request.CreateBudgetRequest;
 import com.semicolon.expensetracker.dtos.response.BudgetLimitVsActualExpenseResponse;
 import com.semicolon.expensetracker.dtos.response.BudgetResponse;
 import com.semicolon.expensetracker.exceptions.InvalidEntryException;
+import com.semicolon.expensetracker.utils.AuthUtils;
 import com.semicolon.expensetracker.utils.mappers.BudgetMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -28,19 +28,17 @@ import java.util.UUID;
 public class BudgetService {
 
     private final BudgetRepository budgetRepository;
-    private final UserRepository userRepository;
     private final CategoryRepository categoryRepository;
     private final ExpenseRepository expenseRepository;
     private final BudgetMapper budgetMapper;
 
     @Transactional
     public BudgetResponse createBudget(CreateBudgetRequest request) {
-        User user = userRepository.findById(request.getUserId())
-                .orElseThrow(() -> new InvalidEntryException("User does not exist"));
+        User user = AuthUtils.getCurrentUser();
         Category category = categoryRepository.findById(request.getCategoryId())
                 .orElseThrow(() -> new InvalidEntryException("Category does not exist"));
         if (budgetRepository.existsByUserIdAndCategoryIdAndMonthYear(
-                request.getUserId(), request.getCategoryId(), request.getYearMonth())) {
+                user.getId(), request.getCategoryId(), request.getYearMonth())) {
             throw new InvalidEntryException("Budget already exists for this category and month");
         }
         Budget budget = new Budget();
@@ -50,36 +48,30 @@ public class BudgetService {
         budget.setCategory(category);
         budget.setUser(user);
         Budget saved = budgetRepository.save(budget);
-        BigDecimal actualSpent = computeActualSpent(saved);
-        return budgetMapper.toResponse(saved, actualSpent, "Budget created successfully");
+        return budgetMapper.toResponse(saved, computeActualSpent(saved), "Budget created successfully");
     }
 
-    public List<BudgetResponse> getBudgetsByUser(UUID userId) {
-        if (!userRepository.existsById(userId)) {
-            throw new InvalidEntryException("User does not exist");
-        }
-        List<Budget> budgets = budgetRepository.findByUserId(userId);
+    public List<BudgetResponse> getBudgetsByUser() {
+        UUID userId = AuthUtils.getCurrentUserId();
         List<BudgetResponse> responses = new ArrayList<>();
-        for (Budget budget : budgets) {
-            responses.add(budgetMapper.toResponse(budget, computeActualSpent(budget), "Success"));
+        for (Budget b : budgetRepository.findByUserId(userId)) {
+            responses.add(budgetMapper.toResponse(b, computeActualSpent(b), "Success"));
         }
         return responses;
     }
 
-    public List<BudgetLimitVsActualExpenseResponse> getBudgetVsActual(UUID userId) {
-        if (!userRepository.existsById(userId)) {
-            throw new InvalidEntryException("User does not exist");
-        }
-        List<Budget> budgets = budgetRepository.findByUserId(userId);
+    public List<BudgetLimitVsActualExpenseResponse> getBudgetVsActual() {
+        UUID userId = AuthUtils.getCurrentUserId();
         List<BudgetLimitVsActualExpenseResponse> responses = new ArrayList<>();
-        for (Budget budget : budgets) {
-            responses.add(budgetMapper.toVsActualResponse(budget, computeActualSpent(budget)));
+        for (Budget b : budgetRepository.findByUserId(userId)) {
+            responses.add(budgetMapper.toVsActualResponse(b, computeActualSpent(b)));
         }
         return responses;
     }
 
     @Transactional
-    public void deleteBudget(UUID budgetId, UUID userId) {
+    public void deleteBudget(UUID budgetId) {
+        UUID userId = AuthUtils.getCurrentUserId();
         Budget budget = budgetRepository.findByIdAndUserId(budgetId, userId)
                 .orElseThrow(() -> new InvalidEntryException("Budget not found or does not belong to this user"));
         budgetRepository.delete(budget);
@@ -90,7 +82,7 @@ public class BudgetService {
         LocalDateTime start = yearMonth.atDay(1).atStartOfDay();
         LocalDateTime end = yearMonth.atEndOfMonth().atTime(23, 59, 59);
         return expenseRepository.sumByCategoryAndUserAndDateRange(
-                budget.getUser().getId(), budget.getCategory().getId(), start, end)
+                        budget.getUser().getId(), budget.getCategory().getId(), start, end)
                 .orElse(BigDecimal.ZERO);
     }
 }
