@@ -4,9 +4,6 @@ import com.semicolon.expensetracker.dtos.request.ChangePasswordRequest;
 import com.semicolon.expensetracker.dtos.request.LoginRequest;
 import com.semicolon.expensetracker.dtos.request.RegisterUserRequest;
 import com.semicolon.expensetracker.dtos.request.UpdateUserRequest;
-import com.semicolon.expensetracker.dtos.response.LoginResponse;
-import com.semicolon.expensetracker.dtos.response.RegisterUserResponse;
-import com.semicolon.expensetracker.dtos.response.UpdateUserResponse;
 import com.semicolon.expensetracker.services.UserService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -22,24 +19,23 @@ public class UserController {
     private final UserService userService;
 
     @PostMapping("/register")
-    public ResponseEntity<RegisterUserResponse> register(@Valid @RequestBody RegisterUserRequest request) {
+    public ResponseEntity<?> register(@Valid @RequestBody RegisterUserRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED).body(userService.registerUser(request));
     }
 
     @PostMapping("/login")
-    public ResponseEntity<LoginResponse> login(@Valid @RequestBody LoginRequest request) {
+    public ResponseEntity<?> login(@Valid @RequestBody LoginRequest request) {
         return ResponseEntity.ok(userService.login(request));
     }
 
-    @PutMapping("/update")
-    public ResponseEntity<UpdateUserResponse> update(@Valid @RequestBody UpdateUserRequest request) {
+    @PatchMapping
+    public ResponseEntity<?> updateUser(@Valid @RequestBody UpdateUserRequest request) {
         return ResponseEntity.ok(userService.updateUser(request));
     }
 
     @PatchMapping("/change-password")
-    public ResponseEntity<String> changePassword(@Valid @RequestBody ChangePasswordRequest request) {
+    public ResponseEntity<?> changePassword(@Valid @RequestBody ChangePasswordRequest request) {
         userService.changePassword(request);
         return ResponseEntity.ok("Password changed successfully");
     }
-
 }

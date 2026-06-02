@@ -14,6 +14,7 @@ import java.util.UUID;
 @RequestMapping("/api/wallets")
 @RequiredArgsConstructor
 public class WalletController {
+
     private final WalletService walletService;
 
     @PostMapping
@@ -21,9 +22,9 @@ public class WalletController {
         return ResponseEntity.status(HttpStatus.CREATED).body(walletService.createWallet(request));
     }
 
-    @GetMapping("/user/{userId}")
-    public ResponseEntity<?> getWalletsByUser(@PathVariable UUID userId) {
-        return ResponseEntity.ok(walletService.getWalletsByUser(userId));
+    @GetMapping
+    public ResponseEntity<?> getMyWallets() {
+        return ResponseEntity.ok(walletService.getWalletsByUser());
     }
 
     @GetMapping("/{walletId}/balance")
