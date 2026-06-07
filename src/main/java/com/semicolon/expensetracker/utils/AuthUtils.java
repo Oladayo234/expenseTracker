@@ -5,8 +5,6 @@ import com.semicolon.expensetracker.exceptions.BadRequestException;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 
-import java.util.UUID;
-
 public class AuthUtils {
 
     private AuthUtils() {}
@@ -20,7 +18,7 @@ public class AuthUtils {
         return (User) authentication.getPrincipal();
     }
 
-    public static UUID getCurrentUserId() {
+    public static Long getCurrentUserId() {
         return getCurrentUser().getId();
     }
 }

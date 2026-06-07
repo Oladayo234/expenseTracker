@@ -9,7 +9,8 @@ import com.semicolon.expensetracker.data.repositories.RecurringExpensesRepositor
 import com.semicolon.expensetracker.data.repositories.WalletRepository;
 import com.semicolon.expensetracker.dtos.request.AddRecurringExpenseRequest;
 import com.semicolon.expensetracker.dtos.response.RecurringExpenseResponse;
-import com.semicolon.expensetracker.exceptions.InvalidEntryException;
+import com.semicolon.expensetracker.exceptions.ForbiddenException;
+import com.semicolon.expensetracker.exceptions.ResourceNotFoundException;
 import com.semicolon.expensetracker.utils.AuthUtils;
 import com.semicolon.expensetracker.utils.mappers.RecurringExpenseMapper;
 import lombok.RequiredArgsConstructor;
@@ -33,13 +34,13 @@ public class RecurringExpenseService {
     @Transactional
     public RecurringExpenseResponse createRecurringExpense(AddRecurringExpenseRequest request) {
         User user = AuthUtils.getCurrentUser();
-        Wallet wallet = walletRepository.findById(request.getWalletId())
-                .orElseThrow(() -> new InvalidEntryException("Wallet does not exist"));
+        Wallet wallet = walletRepository.findByPublicId(request.getWalletId())
+                .orElseThrow(() -> new ResourceNotFoundException("Wallet does not exist"));
         if (!wallet.getUser().getId().equals(user.getId())) {
-            throw new InvalidEntryException("Wallet does not belong to this user");
+            throw new ForbiddenException("Wallet does not belong to this user");
         }
-        Category category = categoryRepository.findById(request.getCategoryId())
-                .orElseThrow(() -> new InvalidEntryException("Category does not exist"));
+        Category category = categoryRepository.findByPublicId(request.getCategoryId())
+                .orElseThrow(() -> new ResourceNotFoundException("Category does not exist"));
         RecurringExpenses recurring = new RecurringExpenses();
         recurring.setAmount(request.getAmount());
         recurring.setFrequency(request.getFrequency());
@@ -52,7 +53,7 @@ public class RecurringExpenseService {
     }
 
     public List<RecurringExpenseResponse> getRecurringExpensesByUser() {
-        UUID userId = AuthUtils.getCurrentUserId();
+        Long userId = AuthUtils.getCurrentUserId();
         List<RecurringExpenseResponse> responses = new ArrayList<>();
         for (RecurringExpenses r : recurringExpensesRepository.findByUserId(userId)) {
             responses.add(recurringExpenseMapper.toResponse(r));
@@ -61,12 +62,12 @@ public class RecurringExpenseService {
     }
 
     @Transactional
-    public void deleteRecurringExpense(UUID recurringExpenseId) {
-        UUID userId = AuthUtils.getCurrentUserId();
-        RecurringExpenses expense = recurringExpensesRepository.findById(recurringExpenseId)
-                .orElseThrow(() -> new InvalidEntryException("Recurring expense does not exist"));
+    public void deleteRecurringExpense(UUID publicId) {
+        Long userId = AuthUtils.getCurrentUserId();
+        RecurringExpenses expense = recurringExpensesRepository.findByPublicId(publicId)
+                .orElseThrow(() -> new ResourceNotFoundException("Recurring expense does not exist"));
         if (!expense.getUser().getId().equals(userId)) {
-            throw new InvalidEntryException("Recurring expense does not belong to this user");
+            throw new ForbiddenException("Recurring expense does not belong to this user");
         }
         recurringExpensesRepository.delete(expense);
     }

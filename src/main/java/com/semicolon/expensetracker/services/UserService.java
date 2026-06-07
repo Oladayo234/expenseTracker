@@ -10,7 +10,9 @@ import com.semicolon.expensetracker.dtos.request.UpdateUserRequest;
 import com.semicolon.expensetracker.dtos.response.LoginResponse;
 import com.semicolon.expensetracker.dtos.response.RegisterUserResponse;
 import com.semicolon.expensetracker.dtos.response.UpdateUserResponse;
+import com.semicolon.expensetracker.exceptions.BadRequestException;
 import com.semicolon.expensetracker.exceptions.InvalidEntryException;
+import com.semicolon.expensetracker.exceptions.UnauthorizedException;
 import com.semicolon.expensetracker.security.JwtService;
 import com.semicolon.expensetracker.utils.AuthUtils;
 import com.semicolon.expensetracker.utils.mappers.UserMapper;
@@ -44,9 +46,9 @@ public class UserService {
 
     public LoginResponse login(LoginRequest request) {
         User user = userRepository.findByUsername(request.getUserName())
-                .orElseThrow(() -> new InvalidEntryException("Invalid credentials"));
+                .orElseThrow(() -> new UnauthorizedException("Invalid credentials"));
         if (!bCryptPasswordEncoder.matches(request.getPassword(), user.getPassword())) {
-            throw new InvalidEntryException("Invalid credentials");
+            throw new UnauthorizedException("Invalid credentials");
         }
         return userMapper.toLoginResponse(user, jwtService.generateToken(user));
     }
@@ -63,10 +65,10 @@ public class UserService {
     public void changePassword(ChangePasswordRequest request) {
         User user = AuthUtils.getCurrentUser();
         if (!bCryptPasswordEncoder.matches(request.getCurrentPassword(), user.getPassword())) {
-            throw new InvalidEntryException("Current password is incorrect");
+            throw new UnauthorizedException("Current password is incorrect");
         }
         if (!request.getNewPassword().equals(request.getConfirmPassword())) {
-            throw new InvalidEntryException("New passwords do not match");
+            throw new BadRequestException("New passwords do not match");
         }
         user.setPassword(bCryptPasswordEncoder.encode(request.getNewPassword()));
         userRepository.save(user);

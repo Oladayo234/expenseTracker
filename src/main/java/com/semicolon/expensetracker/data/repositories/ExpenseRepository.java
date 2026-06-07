@@ -28,10 +28,14 @@ public interface ExpenseRepository extends JpaRepository<Expense, Long> {
  int reassignExpensesToCategory(@Param("oldCategoryId") Long oldCategoryId, @Param("newCategoryId") Long newCategoryId);
 
  List<Expense> findByWalletIdOrderByExpenseDateDesc(Long walletId);
+
  List<Expense> findByCategoryIdOrderByExpenseDateDesc(Long categoryId);
+
  List<Expense> findByWalletIdAndExpenseDateBetweenOrderByExpenseDateDesc(Long walletId, LocalDateTime start, LocalDateTime end);
+
  List<Expense> findByWalletUserIdAndExpenseDateBetween(Long userId, LocalDateTime start, LocalDateTime end);
 
- @Query("SELECT e.category.id, e.category.name, e.category.transactionType, SUM(e.amount) FROM Expense e WHERE e.wallet.user.id = :userId AND e.expenseDate BETWEEN :start AND :end GROUP BY e.category.id, e.category.name, e.category.transactionType")
+ @Query("SELECT e.category.publicId, e.category.name, SUM(e.amount) " + "FROM Expense e " + "WHERE e.wallet.user.id = :userId " + "AND e.expenseDate BETWEEN :start AND :end " + "GROUP BY e.category.publicId, e.category.name")
  List<Object[]> findCategoryBreakdownByUserIdAndDateRange(@Param("userId") Long userId, @Param("start") LocalDateTime start, @Param("end") LocalDateTime end);
+
 }

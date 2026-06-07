@@ -7,7 +7,7 @@ import java.util.UUID;
 
 @Data
 public class CreateWalletResponse {
-    private UUID id;
+    private UUID publicId;
     private String name;
     private Currency currency;
     private String message;

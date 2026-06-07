@@ -11,7 +11,8 @@ import com.semicolon.expensetracker.dtos.request.AddExpenseRequest;
 import com.semicolon.expensetracker.dtos.response.AddExpenseResponse;
 import com.semicolon.expensetracker.dtos.response.CategoryBreakdownResponse;
 import com.semicolon.expensetracker.dtos.response.MonthlySummaryResponse;
-import com.semicolon.expensetracker.exceptions.InvalidEntryException;
+import com.semicolon.expensetracker.exceptions.ForbiddenException;
+import com.semicolon.expensetracker.exceptions.ResourceNotFoundException;
 import com.semicolon.expensetracker.utils.AuthUtils;
 import com.semicolon.expensetracker.utils.mappers.ExpenseMapper;
 import lombok.RequiredArgsConstructor;
@@ -36,10 +37,10 @@ public class ExpenseService {
 
     @Transactional
     public AddExpenseResponse addExpense(AddExpenseRequest request) {
-        UUID userId = AuthUtils.getCurrentUserId();
-        Wallet wallet = findWalletById(request.getWalletId());
+        Long userId = AuthUtils.getCurrentUserId();
+        Wallet wallet = findWalletByPublicId(request.getWalletId());
         validateWalletOwnership(wallet, userId);
-        Category category = findCategoryById(request.getCategoryId());
+        Category category = findCategoryByPublicId(request.getCategoryId());
         validateCategoryAccess(category, userId);
         Expense expense = new Expense();
         expense.setWallet(wallet);
@@ -53,54 +54,52 @@ public class ExpenseService {
     }
 
     @Transactional
-    public void deleteExpense(UUID expenseId) {
-        UUID userId = AuthUtils.getCurrentUserId();
-        Expense expense = expenseRepository.findById(expenseId)
-                .orElseThrow(() -> new InvalidEntryException("Expense does not exist"));
+    public void deleteExpense(UUID publicId) {
+        Long userId = AuthUtils.getCurrentUserId();
+        Expense expense = expenseRepository.findByPublicId(publicId)
+                .orElseThrow(() -> new ResourceNotFoundException("Expense does not exist"));
         if (!expense.getWallet().getUser().getId().equals(userId)) {
-            throw new InvalidEntryException("Expense does not belong to this user");
+            throw new ForbiddenException("Expense does not belong to this user");
         }
         expenseRepository.delete(expense);
     }
 
-    public List<AddExpenseResponse> getExpensesByWallet(UUID walletId) {
-        UUID userId = AuthUtils.getCurrentUserId();
-        Wallet wallet = findWalletById(walletId);
+    public List<AddExpenseResponse> getExpensesByWallet(UUID walletPublicId) {
+        Long userId = AuthUtils.getCurrentUserId();
+        Wallet wallet = findWalletByPublicId(walletPublicId);
         validateWalletOwnership(wallet, userId);
         List<AddExpenseResponse> responses = new ArrayList<>();
-        for (Expense e : expenseRepository.findByWalletIdOrderByExpenseDateDesc(walletId)) {
+        for (Expense e : expenseRepository.findByWalletIdOrderByExpenseDateDesc(wallet.getId())) {
             responses.add(expenseMapper.toResponse(e));
         }
         return responses;
     }
 
-    public List<AddExpenseResponse> getExpensesByCategory(UUID categoryId) {
-        UUID userId = AuthUtils.getCurrentUserId();
-        Category category = findCategoryById(categoryId);
+    public List<AddExpenseResponse> getExpensesByCategory(UUID categoryPublicId) {
+        Long userId = AuthUtils.getCurrentUserId();
+        Category category = findCategoryByPublicId(categoryPublicId);
         validateCategoryAccess(category, userId);
         List<AddExpenseResponse> responses = new ArrayList<>();
-        for (Expense e : expenseRepository.findByCategoryIdOrderByExpenseDateDesc(categoryId)) {
+        for (Expense e : expenseRepository.findByCategoryIdOrderByExpenseDateDesc(category.getId())) {
             responses.add(expenseMapper.toResponse(e));
         }
         return responses;
     }
 
-    public List<AddExpenseResponse> getExpensesByDateRange(UUID walletId,
-                                                           LocalDateTime start,
-                                                           LocalDateTime end) {
-        UUID userId = AuthUtils.getCurrentUserId();
-        Wallet wallet = findWalletById(walletId);
+    public List<AddExpenseResponse> getExpensesByDateRange(UUID walletPublicId, LocalDateTime start,LocalDateTime end) {
+        Long userId = AuthUtils.getCurrentUserId();
+        Wallet wallet = findWalletByPublicId(walletPublicId);
         validateWalletOwnership(wallet, userId);
         List<AddExpenseResponse> responses = new ArrayList<>();
         for (Expense e : expenseRepository
-                .findByWalletIdAndExpenseDateBetweenOrderByExpenseDateDesc(walletId, start, end)) {
+                .findByWalletIdAndExpenseDateBetweenOrderByExpenseDateDesc(wallet.getId(), start, end)) {
             responses.add(expenseMapper.toResponse(e));
         }
         return responses;
     }
 
     public MonthlySummaryResponse getMonthlySummary(int year, int month) {
-        UUID userId = AuthUtils.getCurrentUserId();
+        Long userId = AuthUtils.getCurrentUserId();
         YearMonth yearMonth = YearMonth.of(year, month);
         LocalDateTime start = yearMonth.atDay(1).atStartOfDay();
         LocalDateTime end = yearMonth.atEndOfMonth().atTime(23, 59, 59);
@@ -130,7 +129,7 @@ public class ExpenseService {
     }
 
     public List<CategoryBreakdownResponse> getCategoryBreakdown(int year, int month) {
-        UUID userId = AuthUtils.getCurrentUserId();
+        Long userId = AuthUtils.getCurrentUserId();
         YearMonth yearMonth = YearMonth.of(year, month);
         LocalDateTime start = yearMonth.atDay(1).atStartOfDay();
         LocalDateTime end = yearMonth.atEndOfMonth().atTime(23, 59, 59);
@@ -141,32 +140,32 @@ public class ExpenseService {
             breakdown.add(CategoryBreakdownResponse.builder()
                     .categoryId((UUID) result[0])
                     .categoryName((String) result[1])
-                    .totalAmount((BigDecimal) result[3])
+                    .totalAmount((BigDecimal) result[2])
                     .build());
         }
         return breakdown;
     }
 
-    private void validateWalletOwnership(Wallet wallet, UUID userId) {
+    private void validateWalletOwnership(Wallet wallet, Long userId) {
         if (!wallet.getUser().getId().equals(userId)) {
-            throw new InvalidEntryException("Wallet does not belong to this user");
+            throw new ForbiddenException("Wallet does not belong to this user");
         }
     }
 
-    private void validateCategoryAccess(Category category, UUID userId) {
+    private void validateCategoryAccess(Category category, Long userId) {
         if (!category.isDefaultCategory() && category.getUser() != null
                 && !category.getUser().getId().equals(userId)) {
-            throw new InvalidEntryException("Category does not belong to this user");
+            throw new ForbiddenException("Category does not belong to this user");
         }
     }
 
-    private Wallet findWalletById(UUID walletId) {
-        return walletRepository.findById(walletId)
-                .orElseThrow(() -> new InvalidEntryException("Wallet does not exist"));
+    private Wallet findWalletByPublicId(UUID publicId) {
+        return walletRepository.findByPublicId(publicId)
+                .orElseThrow(() -> new ResourceNotFoundException("Wallet does not exist"));
     }
 
-    private Category findCategoryById(UUID categoryId) {
-        return categoryRepository.findById(categoryId)
-                .orElseThrow(() -> new InvalidEntryException("Category does not exist"));
+    private Category findCategoryByPublicId(UUID publicId) {
+        return categoryRepository.findByPublicId(publicId)
+                .orElseThrow(() -> new ResourceNotFoundException("Category does not exist"));
     }
 }

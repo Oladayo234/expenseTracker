@@ -7,7 +7,10 @@ import com.semicolon.expensetracker.data.repositories.ExpenseRepository;
 import com.semicolon.expensetracker.dtos.request.CreateCategoryRequest;
 import com.semicolon.expensetracker.dtos.request.DeleteCategoryRequest;
 import com.semicolon.expensetracker.dtos.response.CreateCategoryResponse;
+import com.semicolon.expensetracker.exceptions.BadRequestException;
+import com.semicolon.expensetracker.exceptions.ForbiddenException;
 import com.semicolon.expensetracker.exceptions.InvalidEntryException;
+import com.semicolon.expensetracker.exceptions.ResourceNotFoundException;
 import com.semicolon.expensetracker.utils.AuthUtils;
 import com.semicolon.expensetracker.utils.mappers.CategoryMapper;
 import jakarta.transaction.Transactional;
@@ -16,7 +19,6 @@ import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -41,7 +43,7 @@ public class CategoryService {
     }
 
     public List<CreateCategoryResponse> getCategories() {
-        UUID userId = AuthUtils.getCurrentUserId();
+        Long userId = AuthUtils.getCurrentUserId();
         List<CreateCategoryResponse> responses = new ArrayList<>();
         for (Category category : categoryRepository.findByUserIdOrDefaultCategoryTrue(userId)) {
             responses.add(categoryMapper.toResponse(category));
@@ -51,14 +53,14 @@ public class CategoryService {
 
     @Transactional
     public void deleteCategory(DeleteCategoryRequest request) {
-        UUID userId = AuthUtils.getCurrentUserId();
-        Category category = categoryRepository.findById(request.getCategoryId())
-                .orElseThrow(() -> new InvalidEntryException("Category does not exist"));
+        Long userId = AuthUtils.getCurrentUserId();
+        Category category = categoryRepository.findByPublicId(request.getCategoryId())
+                .orElseThrow(() -> new ResourceNotFoundException("Category does not exist"));
         if (category.isDefaultCategory()) {
-            throw new InvalidEntryException("Cannot delete default categories");
+            throw new BadRequestException("Cannot delete default categories");
         }
         if (!category.getUser().getId().equals(userId)) {
-            throw new InvalidEntryException("You don't have permission to delete this category");
+            throw new ForbiddenException("You don't have permission to delete this category");
         }
         Category uncategorized = findOrCreateUncategorized();
         expenseRepository.reassignExpensesToCategory(category.getId(), uncategorized.getId());

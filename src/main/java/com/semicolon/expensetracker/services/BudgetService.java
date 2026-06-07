@@ -9,7 +9,9 @@ import com.semicolon.expensetracker.data.repositories.ExpenseRepository;
 import com.semicolon.expensetracker.dtos.request.CreateBudgetRequest;
 import com.semicolon.expensetracker.dtos.response.BudgetLimitVsActualExpenseResponse;
 import com.semicolon.expensetracker.dtos.response.BudgetResponse;
+import com.semicolon.expensetracker.exceptions.ForbiddenException;
 import com.semicolon.expensetracker.exceptions.InvalidEntryException;
+import com.semicolon.expensetracker.exceptions.ResourceNotFoundException;
 import com.semicolon.expensetracker.utils.AuthUtils;
 import com.semicolon.expensetracker.utils.mappers.BudgetMapper;
 import lombok.RequiredArgsConstructor;
@@ -35,10 +37,10 @@ public class BudgetService {
     @Transactional
     public BudgetResponse createBudget(CreateBudgetRequest request) {
         User user = AuthUtils.getCurrentUser();
-        Category category = categoryRepository.findById(request.getCategoryId())
-                .orElseThrow(() -> new InvalidEntryException("Category does not exist"));
+        Category category = categoryRepository.findByPublicId(request.getCategoryId())
+                .orElseThrow(() -> new ResourceNotFoundException("Category does not exist"));
         if (budgetRepository.existsByUserIdAndCategoryIdAndMonthYear(
-                user.getId(), request.getCategoryId(), request.getYearMonth())) {
+                user.getId(), category.getId(), request.getYearMonth())) {
             throw new InvalidEntryException("Budget already exists for this category and month");
         }
         Budget budget = new Budget();
@@ -52,7 +54,7 @@ public class BudgetService {
     }
 
     public List<BudgetResponse> getBudgetsByUser() {
-        UUID userId = AuthUtils.getCurrentUserId();
+        Long userId = AuthUtils.getCurrentUserId();
         List<BudgetResponse> responses = new ArrayList<>();
         for (Budget b : budgetRepository.findByUserId(userId)) {
             responses.add(budgetMapper.toResponse(b, computeActualSpent(b), "Success"));
@@ -61,7 +63,7 @@ public class BudgetService {
     }
 
     public List<BudgetLimitVsActualExpenseResponse> getBudgetVsActual() {
-        UUID userId = AuthUtils.getCurrentUserId();
+        Long userId = AuthUtils.getCurrentUserId();
         List<BudgetLimitVsActualExpenseResponse> responses = new ArrayList<>();
         for (Budget b : budgetRepository.findByUserId(userId)) {
             responses.add(budgetMapper.toVsActualResponse(b, computeActualSpent(b)));
@@ -70,13 +72,15 @@ public class BudgetService {
     }
 
     @Transactional
-    public void deleteBudget(UUID budgetId) {
-        UUID userId = AuthUtils.getCurrentUserId();
-        Budget budget = budgetRepository.findByIdAndUserId(budgetId, userId)
-                .orElseThrow(() -> new InvalidEntryException("Budget not found or does not belong to this user"));
+    public void deleteBudget(UUID publicId) {
+        Long userId = AuthUtils.getCurrentUserId();
+        Budget budget = budgetRepository.findByPublicId(publicId)
+                .orElseThrow(() -> new ResourceNotFoundException("Budget does not exist"));
+        if (!budget.getUser().getId().equals(userId)) {
+            throw new ForbiddenException("Budget does not belong to this user");
+        }
         budgetRepository.delete(budget);
     }
-
     private BigDecimal computeActualSpent(Budget budget) {
         YearMonth yearMonth = budget.getMonthYear();
         LocalDateTime start = yearMonth.atDay(1).atStartOfDay();
