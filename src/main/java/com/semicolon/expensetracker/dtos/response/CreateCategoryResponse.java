@@ -10,7 +10,7 @@ import java.util.UUID;
 @Data
 public class CreateCategoryResponse {
     private String name;
-    private UUID id;
+    private UUID publicId;
     private TransactionType transactionType;
     private boolean isDefault;
     private String icon;

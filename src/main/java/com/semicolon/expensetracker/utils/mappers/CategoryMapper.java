@@ -9,7 +9,7 @@ public class CategoryMapper {
 
     public CreateCategoryResponse toResponse(Category category) {
         return CreateCategoryResponse.builder()
-                .id(category.getId())
+                .publicId(category.getPublicId())
                 .name(category.getName())
                 .transactionType(category.getTransactionType())
                 .isDefault(category.isDefaultCategory())

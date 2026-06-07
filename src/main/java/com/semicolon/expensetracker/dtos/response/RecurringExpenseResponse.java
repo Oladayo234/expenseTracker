@@ -15,7 +15,7 @@ import java.util.UUID;
 @NoArgsConstructor
 @AllArgsConstructor
 public class RecurringExpenseResponse {
-    private UUID id;
+    private UUID publicId;
     private BigDecimal amount;
     private Frequency frequency;
     private LocalDate nextDueDate;

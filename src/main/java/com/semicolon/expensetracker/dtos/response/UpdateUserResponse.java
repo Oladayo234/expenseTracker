@@ -6,7 +6,7 @@ import java.util.UUID;
 
 @Data
 public class UpdateUserResponse {
-    private UUID id;
+    private UUID publicId;
     private String username;
     private String token;
 }

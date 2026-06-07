@@ -12,7 +12,7 @@ public class WalletMapper {
 
     public WalletResponse toWalletResponse(Wallet wallet) {
         return WalletResponse.builder()
-                .id(wallet.getId())
+                .publicId(wallet.getPublicId())
                 .name(wallet.getName())
                 .currency(wallet.getCurrency())
                 .build();
@@ -20,7 +20,7 @@ public class WalletMapper {
 
     public WalletBalanceResponse toWalletBalanceResponse(Wallet wallet, BigDecimal balance) {
         return WalletBalanceResponse.builder()
-                .walletId(wallet.getId())
+                .walletId(wallet.getPublicId())
                 .walletName(wallet.getName())
                 .currency(wallet.getCurrency())
                 .balance(balance)

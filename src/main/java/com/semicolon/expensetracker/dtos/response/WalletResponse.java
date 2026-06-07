@@ -9,7 +9,7 @@ import java.util.UUID;
 @Data
 @Builder
 public class WalletResponse {
-    private UUID id;
+    private UUID publicId;
     private String name;
     private Currency currency;
 }

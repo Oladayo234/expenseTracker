@@ -9,12 +9,12 @@ public class RecurringExpenseMapper {
 
     public RecurringExpenseResponse toResponse(RecurringExpenses expense) {
         RecurringExpenseResponse response = new RecurringExpenseResponse();
-        response.setId(expense.getId());
+        response.setPublicId(expense.getPublicId());
         response.setAmount(expense.getAmount());
         response.setFrequency(expense.getFrequency());
         response.setNextDueDate(expense.getNextDueDate());
-        response.setWalletId(expense.getWallet().getId());
-        response.setCategoryId(expense.getCategory().getId());
+        response.setWalletId(expense.getWallet().getPublicId());
+        response.setCategoryId(expense.getCategory().getPublicId());
         response.setCategoryName(expense.getCategory().getName());
         response.setMessage("Success");
         return response;

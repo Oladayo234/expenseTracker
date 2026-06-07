@@ -15,7 +15,7 @@ import java.util.UUID;
 @NoArgsConstructor
 @AllArgsConstructor
 public class AddExpenseResponse {
-    private UUID id;
+    private UUID publicId;
     private UUID walletId;
     private UUID categoryId;
     private String categoryName;

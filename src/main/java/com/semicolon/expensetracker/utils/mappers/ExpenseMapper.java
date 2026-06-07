@@ -9,9 +9,9 @@ public class ExpenseMapper {
 
     public AddExpenseResponse toResponse(Expense expense) {
         AddExpenseResponse response = new AddExpenseResponse();
-        response.setId(expense.getId());
-        response.setWalletId(expense.getWallet().getId());
-        response.setCategoryId(expense.getCategory().getId());
+        response.setPublicId(expense.getPublicId());
+        response.setWalletId(expense.getWallet().getPublicId());
+        response.setCategoryId(expense.getCategory().getPublicId());
         response.setCategoryName(expense.getCategory().getName());
         response.setAmount(expense.getAmount());
         response.setNote(expense.getNote());

@@ -13,10 +13,10 @@ public class BudgetMapper {
 
     public BudgetResponse toResponse(Budget budget, BigDecimal actualSpent, String message) {
         BudgetResponse response = new BudgetResponse();
-        response.setId(budget.getId());
+        response.setPublicId(budget.getPublicId());
         response.setBudgetName(budget.getBudgetName());
         response.setBudgetAmount(budget.getBudgetAmount());
-        response.setCategoryId(budget.getCategory().getId());
+        response.setCategoryId(budget.getCategory().getPublicId());
         response.setCategoryName(budget.getCategory().getName());
         response.setYearMonth(budget.getMonthYear());
         response.setActualSpent(actualSpent);
@@ -31,14 +31,14 @@ public class BudgetMapper {
         double percentageUsed = budgetAmount.compareTo(BigDecimal.ZERO) == 0
                 ? 0.0
                 : actualSpent.multiply(BigDecimal.valueOf(100))
-                             .divide(budgetAmount, 2, RoundingMode.HALF_UP)
-                             .doubleValue();
+                .divide(budgetAmount, 2, RoundingMode.HALF_UP)
+                .doubleValue();
         String status = percentageUsed >= 100 ? "EXCEEDED"
-                      : percentageUsed >= 80  ? "WARNING"
-                      : "ON_TRACK";
+                : percentageUsed >= 80  ? "WARNING"
+                  : "ON_TRACK";
         return BudgetLimitVsActualExpenseResponse.builder()
-                .budgetId(budget.getId())
-                .categoryId(budget.getCategory().getId())
+                .budgetId(budget.getPublicId())
+                .categoryId(budget.getCategory().getPublicId())
                 .categoryName(budget.getCategory().getName())
                 .budgetAmount(budgetAmount)
                 .actualSpent(actualSpent)

@@ -11,7 +11,6 @@ import org.springframework.stereotype.Service;
 
 import javax.crypto.SecretKey;
 import java.util.Date;
-import java.util.UUID;
 
 @Service
 public class JwtService {
@@ -31,8 +30,8 @@ public class JwtService {
                 .compact();
     }
 
-    public UUID extractUserId(String token) {
-        return UUID.fromString(parseClaims(token).getSubject());
+    public Long extractUserId(String token) {
+        return Long.parseLong(parseClaims(token).getSubject());
     }
 
     public boolean validateToken(String token) {

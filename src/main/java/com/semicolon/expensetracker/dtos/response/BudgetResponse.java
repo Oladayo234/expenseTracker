@@ -8,7 +8,7 @@ import java.util.UUID;
 
 @Data
 public class BudgetResponse {
-    private UUID id;
+    private UUID publicId;
     private String categoryName;
     private UUID categoryId;
     private BigDecimal actualSpent;

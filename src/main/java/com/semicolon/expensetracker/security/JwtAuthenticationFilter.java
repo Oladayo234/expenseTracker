@@ -44,7 +44,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         }
 
         if (SecurityContextHolder.getContext().getAuthentication() == null) {
-            UUID userId = jwtService.extractUserId(token);
+            Long userId = jwtService.extractUserId(token);
             User user = userRepository.findById(userId).orElse(null);
 
             if (user != null) {

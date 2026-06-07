@@ -31,7 +31,7 @@ public class UserMapper {
 
     public LoginResponse toLoginResponse(User user, String token) {
         LoginResponse response = new LoginResponse();
-        response.setId(user.getId().toString());
+        response.setPublicId(user.getPublicId());
         response.setName(user.getName());
         response.setUserName(user.getUsername());
         response.setToken(token);
@@ -41,7 +41,7 @@ public class UserMapper {
 
     public UpdateUserResponse toUpdateResponse(User user, String token) {
         UpdateUserResponse response = new UpdateUserResponse();
-        response.setId(user.getId());
+        response.setPublicId(user.getPublicId());
         response.setUsername(user.getUsername());
         response.setToken(token);
         return response;
