@@ -16,9 +16,13 @@ import java.util.UUID;
 @EqualsAndHashCode(onlyExplicitlyIncluded = true)
 public class Budget {
     @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     @EqualsAndHashCode.Include
-    private UUID id;
+    private Long id;
+
+    @Column(unique = true, nullable = false, updatable = false)
+    private UUID publicId;
+
     private String budgetName;
     private BigDecimal budgetAmount;
 
@@ -33,4 +37,9 @@ public class Budget {
     @ManyToOne(optional = false)
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
+
+    @PrePersist
+    private void generatePublicId() {
+        if (publicId == null) publicId = UUID.randomUUID();
+    }
 }

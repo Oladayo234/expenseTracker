@@ -16,12 +16,18 @@ import java.util.UUID;
 @EqualsAndHashCode(onlyExplicitlyIncluded = true)
 public class Expense {
     @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     @EqualsAndHashCode.Include
-    private UUID id;
+    private Long id;
+
+    @Column(unique = true, nullable = false, updatable = false)
+    private UUID publicId;
+
     private BigDecimal amount;
     private LocalDateTime expenseDate = LocalDateTime.now();
     private String note;
+    @Enumerated(EnumType.STRING)
+    @Column(name = "payment_method")
     private PaymentMethod paymentMethod;
 
     @ManyToOne(optional = false)
@@ -31,4 +37,9 @@ public class Expense {
     @ManyToOne(optional = false)
     @JoinColumn(name = "category_id", nullable = false)
     private Category category;
+
+    @PrePersist
+    private void generatePublicId() {
+        if (publicId == null) publicId = UUID.randomUUID();
+    }
 }

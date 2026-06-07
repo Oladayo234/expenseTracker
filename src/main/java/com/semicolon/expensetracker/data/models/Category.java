@@ -14,9 +14,12 @@ import java.util.UUID;
 @EqualsAndHashCode(onlyExplicitlyIncluded = true)
 public class Category {
     @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     @EqualsAndHashCode.Include
-    private UUID id;
+    private Long id;
+
+    @Column(unique = true, nullable = false, updatable = false)
+    private UUID publicId;
 
     @Column(nullable = false)
     private String name;
@@ -26,9 +29,15 @@ public class Category {
     private boolean defaultCategory;
 
     @Enumerated(EnumType.STRING)
+    @Column(name ="transaction_type")
     private TransactionType transactionType;
 
     @ManyToOne(optional = true)
     @JoinColumn(name = "user_id")
     private User user;
+
+    @PrePersist
+    private void generatePublicId() {
+        if (publicId == null) publicId = UUID.randomUUID();
+    }
 }

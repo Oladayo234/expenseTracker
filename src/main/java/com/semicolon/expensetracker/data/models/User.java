@@ -15,13 +15,25 @@ import java.util.UUID;
 @EqualsAndHashCode(onlyExplicitlyIncluded = true)
 public class User {
     @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     @EqualsAndHashCode.Include
-    private UUID id;
+    private Long id;
+
+    @Column(unique = true, nullable = false, updatable = false)
+    private UUID publicId;
+
     private String username;
     private String name;
     private String password;
     private String email;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "currency")
     private Currency currencyPreference;
     private String phoneNumber;
+
+    @PrePersist
+    private void generatePublicId() {
+        if (publicId == null) publicId = UUID.randomUUID();
+    }
 }

@@ -13,28 +13,25 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
-public interface ExpenseRepository extends JpaRepository<Expense, UUID> {
- List<Expense> findByWalletId(UUID WalletId);
- List<Expense> findByCategoryId(UUID CategoryId);
+public interface ExpenseRepository extends JpaRepository<Expense, Long> {
+
+ Optional<Expense> findByPublicId(UUID publicId);
 
  @Query("SELECT SUM(e.amount) FROM Expense e WHERE e.wallet.id = :walletId AND e.category.transactionType IN :types")
- Optional<BigDecimal> sumByWalletIdAndTypes(@Param("walletId") UUID walletId, @Param("types") List<TransactionType> types);
+ Optional<BigDecimal> sumByWalletIdAndTypes(@Param("walletId") Long walletId, @Param("types") List<TransactionType> types);
 
  @Query("SELECT SUM(e.amount) FROM Expense e WHERE e.wallet.user.id = :userId AND e.category.id = :categoryId AND e.expenseDate BETWEEN :start AND :end")
- Optional<BigDecimal> sumByCategoryAndUserAndDateRange(@Param("userId") UUID userId, @Param("categoryId") UUID categoryId, @Param("start") LocalDateTime start, @Param("end") LocalDateTime end);
+ Optional<BigDecimal> sumByCategoryAndUserAndDateRange(@Param("userId") Long userId, @Param("categoryId") Long categoryId, @Param("start") LocalDateTime start, @Param("end") LocalDateTime end);
 
  @Modifying
  @Query("UPDATE Expense e SET e.category = (SELECT c FROM Category c WHERE c.id = :newCategoryId) WHERE e.category.id = :oldCategoryId")
- int reassignExpensesToCategory(@Param("oldCategoryId") UUID oldCategoryId, @Param("newCategoryId") UUID newCategoryId);
+ int reassignExpensesToCategory(@Param("oldCategoryId") Long oldCategoryId, @Param("newCategoryId") Long newCategoryId);
 
- List<Expense> findByWalletIdOrderByExpenseDateDesc(UUID walletId);
- List<Expense> findByCategoryIdOrderByExpenseDateDesc(UUID categoryId);
- List<Expense> findByWalletIdAndExpenseDateBetweenOrderByExpenseDateDesc(UUID walletId, LocalDateTime start, LocalDateTime end);
- List<Expense> findByWalletUserIdAndExpenseDateBetween(UUID userId, LocalDateTime start, LocalDateTime end);
+ List<Expense> findByWalletIdOrderByExpenseDateDesc(Long walletId);
+ List<Expense> findByCategoryIdOrderByExpenseDateDesc(Long categoryId);
+ List<Expense> findByWalletIdAndExpenseDateBetweenOrderByExpenseDateDesc(Long walletId, LocalDateTime start, LocalDateTime end);
+ List<Expense> findByWalletUserIdAndExpenseDateBetween(Long userId, LocalDateTime start, LocalDateTime end);
 
  @Query("SELECT e.category.id, e.category.name, e.category.transactionType, SUM(e.amount) FROM Expense e WHERE e.wallet.user.id = :userId AND e.expenseDate BETWEEN :start AND :end GROUP BY e.category.id, e.category.name, e.category.transactionType")
- List<Object[]> findCategoryBreakdownByUserIdAndDateRange(@Param("userId") UUID userId, @Param("start") LocalDateTime start, @Param("end") LocalDateTime end);
-
- List<Expense> findByExpenseDateBetween(LocalDateTime start, LocalDateTime end);
- List<Expense> findByWalletIdAndExpenseDateBetween(UUID walletId, LocalDateTime start, LocalDateTime end);
+ List<Object[]> findCategoryBreakdownByUserIdAndDateRange(@Param("userId") Long userId, @Param("start") LocalDateTime start, @Param("end") LocalDateTime end);
 }
