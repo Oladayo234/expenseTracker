@@ -32,9 +32,9 @@ public class BudgetController {
         return ResponseEntity.ok(budgetService.getBudgetVsActual());
     }
 
-    @DeleteMapping("/{budgetId}")
-    public ResponseEntity<?> deleteBudget(@PathVariable UUID budgetId) {
-        budgetService.deleteBudget(budgetId);
+    @DeleteMapping("/{publicId}")
+    public ResponseEntity<?> deleteBudget(@PathVariable UUID publicId) {
+        budgetService.deleteBudget(publicId);
         return ResponseEntity.ok("Budget deleted successfully");
     }
 }

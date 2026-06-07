@@ -24,27 +24,27 @@ public class ExpenseController {
         return ResponseEntity.status(HttpStatus.CREATED).body(expenseService.addExpense(request));
     }
 
-    @GetMapping("/wallet/{walletId}")
-    public ResponseEntity<?> getExpensesByWallet(@PathVariable UUID walletId) {
-        return ResponseEntity.ok(expenseService.getExpensesByWallet(walletId));
+    @GetMapping("/wallet/{publicId}")
+    public ResponseEntity<?> getExpensesByWallet(@PathVariable UUID publicId) {
+        return ResponseEntity.ok(expenseService.getExpensesByWallet(publicId));
     }
 
-    @GetMapping("/wallet/{walletId}/range")
+    @GetMapping("/wallet/{publicId}/range")
     public ResponseEntity<?> getExpensesByDateRange(
-            @PathVariable UUID walletId,
+            @PathVariable UUID publicId,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime start,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime end) {
-        return ResponseEntity.ok(expenseService.getExpensesByDateRange(walletId, start, end));
+        return ResponseEntity.ok(expenseService.getExpensesByDateRange(publicId, start, end));
     }
 
-    @GetMapping("/category/{categoryId}")
-    public ResponseEntity<?> getExpensesByCategory(@PathVariable UUID categoryId) {
-        return ResponseEntity.ok(expenseService.getExpensesByCategory(categoryId));
+    @GetMapping("/category/{publicId}")
+    public ResponseEntity<?> getExpensesByCategory(@PathVariable UUID publicId) {
+        return ResponseEntity.ok(expenseService.getExpensesByCategory(publicId));
     }
 
-    @DeleteMapping("/{expenseId}")
-    public ResponseEntity<?> deleteExpense(@PathVariable UUID expenseId) {
-        expenseService.deleteExpense(expenseId);
+    @DeleteMapping("/{publicId}")
+    public ResponseEntity<?> deleteExpense(@PathVariable UUID publicId) {
+        expenseService.deleteExpense(publicId);
         return ResponseEntity.ok("Expense deleted successfully");
     }
 

@@ -28,9 +28,9 @@ public class RecurringExpenseController {
         return ResponseEntity.ok(recurringExpenseService.getRecurringExpensesByUser());
     }
 
-    @DeleteMapping("/{id}")
-    public ResponseEntity<?> delete(@PathVariable UUID id) {
-        recurringExpenseService.deleteRecurringExpense(id);
+    @DeleteMapping("/{publicId}")
+    public ResponseEntity<?> delete(@PathVariable UUID publicId) {
+        recurringExpenseService.deleteRecurringExpense(publicId);
         return ResponseEntity.ok("Recurring expense deleted successfully");
     }
 }

@@ -27,8 +27,8 @@ public class WalletController {
         return ResponseEntity.ok(walletService.getWalletsByUser());
     }
 
-    @GetMapping("/{walletId}/balance")
-    public ResponseEntity<?> getWalletBalance(@PathVariable UUID walletId) {
-        return ResponseEntity.ok(walletService.getWalletBalance(walletId));
+    @GetMapping("/{publicId}/balance")
+    public ResponseEntity<?> getWalletBalance(@PathVariable UUID publicId) {
+        return ResponseEntity.ok(walletService.getWalletBalance(publicId));
     }
 }
