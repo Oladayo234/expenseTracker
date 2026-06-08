@@ -24,6 +24,8 @@ public class Budget {
     private UUID publicId;
 
     private String budgetName;
+
+    @Column(nullable = false, precision = 19, scale = 2)
     private BigDecimal budgetAmount;
 
     @Column(name = "month_year")

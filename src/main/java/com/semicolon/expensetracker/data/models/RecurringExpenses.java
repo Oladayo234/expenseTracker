@@ -23,6 +23,7 @@ public class RecurringExpenses {
     @Column(unique = true, nullable = false, updatable = false)
     private UUID publicId;
 
+    @Column(nullable = false, precision = 19, scale = 2)
     private BigDecimal amount;
 
     @Enumerated(EnumType.STRING)
