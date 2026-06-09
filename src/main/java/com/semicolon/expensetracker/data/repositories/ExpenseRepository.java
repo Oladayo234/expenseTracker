@@ -2,6 +2,7 @@ package com.semicolon.expensetracker.data.repositories;
 
 import com.semicolon.expensetracker.data.models.Expense;
 import com.semicolon.expensetracker.data.models.enums.TransactionType;
+import com.semicolon.expensetracker.dtos.response.CategoryBreakdownResponse;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
@@ -35,7 +36,14 @@ public interface ExpenseRepository extends JpaRepository<Expense, Long> {
 
  List<Expense> findByWalletUserIdAndExpenseDateBetween(Long userId, LocalDateTime start, LocalDateTime end);
 
- @Query("SELECT e.category.publicId, e.category.name, SUM(e.amount) " + "FROM Expense e " + "WHERE e.wallet.user.id = :userId " + "AND e.expenseDate BETWEEN :start AND :end " + "GROUP BY e.category.publicId, e.category.name")
- List<Object[]> findCategoryBreakdownByUserIdAndDateRange(@Param("userId") Long userId, @Param("start") LocalDateTime start, @Param("end") LocalDateTime end);
-
+ @Query("SELECT new com.semicolon.expensetracker.dtos.response.CategoryBreakdownResponse(" +
+         "e.category.publicId, e.category.name, SUM(e.amount)) " +
+         "FROM Expense e " +
+         "WHERE e.wallet.user.id = :userId " +
+         "AND e.expenseDate BETWEEN :start AND :end " +
+         "GROUP BY e.category.publicId, e.category.name")
+ List<CategoryBreakdownResponse> findCategoryBreakdownByUserIdAndDateRange(
+         @Param("userId") Long userId,
+         @Param("start") LocalDateTime start,
+         @Param("end") LocalDateTime end);
 }

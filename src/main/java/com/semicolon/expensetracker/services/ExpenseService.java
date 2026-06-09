@@ -133,17 +133,7 @@ public class ExpenseService {
         YearMonth yearMonth = YearMonth.of(year, month);
         LocalDateTime start = yearMonth.atDay(1).atStartOfDay();
         LocalDateTime end = yearMonth.atEndOfMonth().atTime(23, 59, 59);
-        List<Object[]> results = expenseRepository
-                .findCategoryBreakdownByUserIdAndDateRange(userId, start, end);
-        List<CategoryBreakdownResponse> breakdown = new ArrayList<>();
-        for (Object[] result : results) {
-            breakdown.add(CategoryBreakdownResponse.builder()
-                    .categoryId((UUID) result[0])
-                    .categoryName((String) result[1])
-                    .totalAmount((BigDecimal) result[2])
-                    .build());
-        }
-        return breakdown;
+        return expenseRepository.findCategoryBreakdownByUserIdAndDateRange(userId, start, end);
     }
 
     private void validateWalletOwnership(Wallet wallet, Long userId) {

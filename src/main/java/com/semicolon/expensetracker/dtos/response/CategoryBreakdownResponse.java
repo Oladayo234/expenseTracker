@@ -17,4 +17,11 @@ public class CategoryBreakdownResponse {
     private String categoryName;
     private BigDecimal totalAmount;
     private double percentage;
+
+    public CategoryBreakdownResponse(UUID categoryId, String categoryName, BigDecimal totalAmount) {
+        this.categoryId = categoryId;
+        this.categoryName = categoryName;
+        this.totalAmount = totalAmount;
+        this.percentage = 0.0;
+    }
 }
