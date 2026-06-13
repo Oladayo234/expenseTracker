@@ -41,9 +41,13 @@ jobs:
           distribution: 'temurin'
           cache: 'maven'
 
+      - name: Create .env for CI
+        run: |
+          echo "JWT_SECRET=${{ secrets.JWT_SECRET }}" > .env
+          echo "DB_PASSWORD=postgres" >> .env
+          echo "DB_USERNAME=postgres" >> .env
+
       - name: Run tests
-        env:
-          JWT_SECRET: ${{ secrets.JWT_SECRET }}
         run: mvn clean test -B -Dspring.profiles.active=test
 
       - name: Upload test results
