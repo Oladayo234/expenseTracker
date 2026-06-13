@@ -128,7 +128,6 @@
                 <artifactId>maven-surefire-plugin</artifactId>
                 <configuration>
                     <forkCount>1</forkCount>
-                    <jvm>/usr/lib/jvm/java-25-openjdk-amd64/bin/java</jvm>
                 </configuration>
             </plugin>
             <plugin>
