@@ -13,6 +13,7 @@ import java.util.UUID;
 public interface RecurringExpensesRepository extends JpaRepository<RecurringExpenses, Long> {
     List<RecurringExpenses> findByWalletIdAndNextDueDateAndFrequency(Long id, LocalDate date, Frequency frequency);
     List<RecurringExpenses> findByUserId(Long userId);
+    List<RecurringExpenses> findByNextDueDateLessThanEqual(LocalDate date);
 
     Optional<RecurringExpenses> findByPublicId(UUID publicId);
 }

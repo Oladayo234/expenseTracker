@@ -36,6 +36,8 @@ public interface ExpenseRepository extends JpaRepository<Expense, Long> {
 
  List<Expense> findByWalletUserIdAndExpenseDateBetween(Long userId, LocalDateTime start, LocalDateTime end);
 
+ List<Expense> findTop5ByWalletUserIdOrderByExpenseDateDesc(Long userId);
+
  @Query("SELECT new com.semicolon.expensetracker.dtos.response.CategoryBreakdownResponse(" +
          "e.category.publicId, e.category.name, SUM(e.amount)) " +
          "FROM Expense e " +
