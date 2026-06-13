@@ -43,15 +43,8 @@ jobs:
 
       - name: Run tests
         env:
-          DB_HOST: localhost
-          DB_PORT: 5432
-          DB_NAME: expense_tracker_test
-          DB_USERNAME: postgres
-          DB_PASSWORD: postgres
           JWT_SECRET: ${{ secrets.JWT_SECRET }}
-          JWT_EXPIRATION: 86400000
-          SPRING_PROFILES_ACTIVE: test
-        run: mvn clean test -B
+        run: mvn clean test -B -Dspring.profiles.active=test
 
       - name: Upload test results
         if: always()
